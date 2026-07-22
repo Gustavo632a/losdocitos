@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Los Docitos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="hero">
+        <div class="hero-content">
+            <p class="tag">Doceria artesanal</p>
+            <h1>Los Docitos</h1>
+            <p>Delícias de bolo de pote, sabores caseiros e uma aparência que lembra sobremesa de festa.</p>
+            <a class="btn" href="#sabores">Ver sabores</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="info-grid">
+            <div class="card">
+                <h3>Feito com carinho</h3>
+                <p>Receitas especiais com camadas fofas, creme suave e cobertura irresistível.</p>
+            </div>
+            <div class="card">
+                <h3>Sabores que conquistam</h3>
+                <p>Do tradicional ao mais moderno, tudo com aquele gosto de bolo de pote.</p>
+            </div>
+            <div class="card">
+                <h3>Para todos os momentos</h3>
+                <p>Perfeita para festas, aniversários e aquele momento de doce em casa.</p>
+            </div>
+        </section>
+
+        <section class="menu" id="sabores">
+            <h2>Nossos sabores</h2>
+            <div class="cards">
+                <article class="item">
+                    <h3>Chocolate</h3>
+                    <p>Creme intenso, cobertura de brigadeiro e pedaços de bolo macios.</p>
+                    <button class="buy-btn" data-name="Chocolate" data-price="12">Adicionar · R$ 12,00</button>
+                </article>
+                <article class="item">
+                    <h3>Prestígio</h3>
+                    <p>Chocolate com coco, uma combinação cremosa e irresistível.</p>
+                    <button class="buy-btn" data-name="Prestígio" data-price="12">Adicionar · R$ 12,00</button>
+                </article>
+                <article class="item">
+                    <h3>Ninho</h3>
+                    <p>Leite condensado e sabor delicado, perfeito para quem ama um doce suave.</p>
+                    <button class="buy-btn" data-name="Ninho" data-price="12">Adicionar · R$ 12,00</button>
+                </article>
+                <article class="item">
+                    <h3>Limão</h3>
+                    <p>Refrescante e leve, com um toque cítrico que equilibra muito bem.</p>
+                    <button class="buy-btn" data-name="Limão" data-price="12">Adicionar · R$ 12,00</button>
+                </article>
+            </div>
+        </section>
+
+        <section class="cart-card" aria-live="polite">
+            <h2>Carrinho</h2>
+            <p id="cart-count">0 itens</p>
+            <p id="cart-total">Total: R$ 0,00</p>
+            <ul id="cart-items"></ul>
+            <p id="cart-error" class="cart-error" aria-live="polite"></p>
+            <button class="buy-now-btn" id="buy-now-link" type="button">Comprar</button>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

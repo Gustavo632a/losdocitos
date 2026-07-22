@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compra - Los Docitos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="checkout-page">
+        <section class="checkout-card">
+            <h1>Pedido confirmado!</h1>
+            <p>Seu pedido está sendo preparado com carinho na Los Docitos.</p>
+            
+            <div id="resumo-final" class="resumo-pedido">
+                <h2>Resumo do pedido</h2>
+                <ul id="carrinho-final"></ul>
+                <div class="resumo-total">
+                    <p><strong>Subtotal (produtos):</strong> <span id="subtotal-final">R$ 0,00</span></p>
+                    <p><strong>Frete:</strong> <span id="frete-final">R$ 0,00</span></p>
+                    <p class="total-final"><strong>Total:</strong> <span id="total-final-compra">R$ 0,00</span></p>
+                </div>
+            </div>
+
+            <a class="back-link" href="index.html">Voltar para a página inicial</a>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cartData = localStorage.getItem('cartData');
+            const carrinhoFinal = document.getElementById('carrinho-final');
+            const freteValue = localStorage.getItem('freteValue') || '0';
+            let subtotal = 0;
+
+            if (cartData) {
+                const items = JSON.parse(cartData);
+                Object.entries(items).forEach(([nome, quantidade]) => {
+                    const valor = quantidade * 12;
+                    subtotal += valor;
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>${nome}</span> <span>${quantidade}x R$ 12,00 = R$ ${valor.toFixed(2).replace('.', ',')}</span>`;
+                    carrinhoFinal.appendChild(li);
+                });
+            }
+
+            const frete = parseFloat(freteValue);
+            const total = subtotal + frete;
+
+            document.getElementById('subtotal-final').textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+            document.getElementById('frete-final').textContent = frete === 0 ? 'A calcular' : `R$ ${frete.toFixed(2).replace('.', ',')}`;
+            document.getElementById('total-final-compra').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+        });
+    </script>
+</body>
+</html>
