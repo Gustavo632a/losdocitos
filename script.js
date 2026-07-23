@@ -163,12 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const ruaInput = document.getElementById('rua').value.trim();
             const numeroInput = document.getElementById('numero').value.trim();
             const complementoInput = document.getElementById('complemento').value.trim();
-            const referenciaInput = document.getElementById('referencia').value.trim();
-            const telefoneInput = document.getElementById('telefone')?.value.trim() || '';
+            const referenciaInput = document.getElementById('referencia').value.trim()
 
             if (!cepValue || !bairroInput || !ruaInput || !numeroInput || !telefoneInput) {
                 if (resultBox) {
-                    resultBox.innerHTML = '<p class="error-message">Preencha CEP, bairro, rua, número e telefone.</p>';
+                    resultBox.innerHTML = '<p class="error-message">Preencha CEP, bairro, rua e número.</p>';
                 }
                 atualizarEstadoConfirmarBtn();
                 return;
