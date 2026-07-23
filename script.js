@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const complementoInput = document.getElementById('complemento').value.trim();
             const referenciaInput = document.getElementById('referencia').value.trim()
 
-            if (!cepValue || !bairroInput || !ruaInput || !numeroInput || !telefoneInput) {
+            if (!cepValue || !bairroInput || !ruaInput || !numeroInput ) {
                 if (resultBox) {
                     resultBox.innerHTML = '<p class="error-message">Preencha CEP, bairro, rua e número.</p>';
                 }
@@ -180,7 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 numero: numeroInput,
                 complemento: complementoInput,
                 referencia: referenciaInput,
-                telefone: telefoneInput
             };
 
             localStorage.setItem('enderecoEntrega', JSON.stringify(endereco));
