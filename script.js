@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const cepInput = document.getElementById('cep');
         const resumoPedido = document.getElementById('resumo-pedido');
         const confirmarBtn = document.getElementById('confirmar-btn');
+        const resultBox = document.getElementById('frete-result');
+        const requiredInputs = Array.from(freteForm.querySelectorAll('input[required]'));
 
         // Carrega os itens do carrinho e exibe no resumo
         function carregarResumo() {
@@ -86,8 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function enviarMensagemWhatsApp() {
             const mensagemLoja = encodeURIComponent(montarMensagemWhatsApp());
-            const mensagemCliente = encodeURIComponent('Olá! Seu pedido foi confirmado com sucesso pela Los Docitos. Em breve entraremos em contato para confirmar o prazo de entrega. Obrigado pela preferência!');
-            const telefoneCliente = (JSON.parse(localStorage.getItem('enderecoEntrega') || '{}').telefone || '').replace(/\D/g, '');
+            const mensagemCliente = encodeURIComponent('O   lá! Seu pedido foi confirmado com sucesso pela Los Docitos. Em breve entraremos em contato para confirmar o prazo de entrega. Obrigado pela preferência!');
             const urlLoja = `https://wa.me/${whatsappNumber}?text=${mensagemLoja}`;
             const urlCliente = telefoneCliente ? `https://wa.me/${telefoneCliente}?text=${mensagemCliente}` : null;
             window.location.href = urlLoja;
@@ -96,8 +97,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        function atualizarEstadoConfirmarBtn() {
+            if (!confirmarBtn) {
+                return false;
+            }
+
+            const todosPreenchidos = requiredInputs.every((input) => input.value.trim() !== '');
+            confirmarBtn.disabled = !todosPreenchidos;
+            confirmarBtn.setAttribute('aria-disabled', String(!todosPreenchidos));
+            return todosPreenchidos;
+        }
+
+        requiredInputs.forEach((input) => {
+            input.addEventListener('input', atualizarEstadoConfirmarBtn);
+            input.addEventListener('change', atualizarEstadoConfirmarBtn);
+        });
+
+        atualizarEstadoConfirmarBtn();
+
         if (confirmarBtn) {
             confirmarBtn.addEventListener('click', (event) => {
+                if (!atualizarEstadoConfirmarBtn()) {
+                    event.preventDefault();
+                    if (resultBox) {
+                        resultBox.innerHTML = '<p class="error-message">Preencha todos os campos obrigatórios antes de confirmar.</p>';
+                    }
+                    return;
+                }
+
                 event.preventDefault();
                 enviarMensagemWhatsApp();
             });
@@ -137,11 +164,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const numeroInput = document.getElementById('numero').value.trim();
             const complementoInput = document.getElementById('complemento').value.trim();
             const referenciaInput = document.getElementById('referencia').value.trim();
-            const telefoneInput = document.getElementById('telefone').value.trim();
-            const resultBox = document.getElementById('frete-result');
+            const telefoneInput = document.getElementById('telefone')?.value.trim() || '';
 
             if (!cepValue || !bairroInput || !ruaInput || !numeroInput || !telefoneInput) {
-                resultBox.innerHTML = '<p class="error-message">Preencha CEP, bairro, rua e número.</p>';
+                if (resultBox) {
+                    resultBox.innerHTML = '<p class="error-message">Preencha CEP, bairro, rua, número e telefone.</p>';
+                }
+                atualizarEstadoConfirmarBtn();
                 return;
             }
 
@@ -221,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('freteValue', frete.toFixed(2));
             resumoPedido.style.display = 'block';
             document.getElementById('frete-value').textContent = `R$ ${frete.toFixed(2).replace('.', ',')}`;
+            atualizarEstadoConfirmarBtn();
             atualizarTotalFinal();
         });
 
