@@ -88,7 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function enviarMensagemWhatsApp() {
             const mensagemLoja = encodeURIComponent(montarMensagemWhatsApp());
-            const mensagemCliente = encodeURIComponent('O   lá! Seu pedido foi confirmado com sucesso pela Los Docitos. Em breve entraremos em contato para confirmar o prazo de entrega. Obrigado pela preferência!');
+            const endereco = JSON.parse(localStorage.getItem('enderecoEntrega') || '{}');
+            const telefoneCliente = (endereco.telefone || '').replace(/\D/g, '');
+            const mensagemCliente = encodeURIComponent('Olá! Seu pedido foi confirmado com sucesso pela Los Docitos. Em breve entraremos em contato para confirmar o prazo de entrega. Obrigado pela preferência!');
             const urlLoja = `https://wa.me/${whatsappNumber}?text=${mensagemLoja}`;
             const urlCliente = telefoneCliente ? `https://wa.me/${telefoneCliente}?text=${mensagemCliente}` : null;
             window.location.href = urlLoja;
