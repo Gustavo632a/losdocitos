@@ -5,8 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartTotal = document.getElementById('cart-total');
     const cartError = document.getElementById('cart-error');
     const buyNowLink = document.getElementById('buy-now-link');
+    const cartWidgetCount = document.getElementById('cart-widget-count');
+    const cartWidget = document.getElementById('cart-widget');
 
-    const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink);
+    const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink && cartWidgetCount);
     if (shouldInitCart) {
         document.querySelectorAll('.buy-btn').forEach((button) => {
             button.addEventListener('click', () => {
@@ -16,6 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        const pickupBtn = document.getElementById('pickup-btn');
+        const pickupInfo = document.getElementById('pickup-info');
+        const confirmPickupBtn = document.getElementById('confirm-pickup');
+
         buyNowLink.addEventListener('click', () => {
             if (Object.keys(cartItems).length === 0) {
                 cartError.textContent = 'Adicione pelo menos um item para avançar.';
@@ -23,8 +29,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             localStorage.setItem('cartData', JSON.stringify(cartItems));
+            localStorage.setItem('orderType', 'delivery');
             window.location.href = 'frete.html';
         });
+
+        if (pickupBtn && pickupInfo) {
+            pickupBtn.addEventListener('click', () => {
+                if (Object.keys(cartItems).length === 0) {
+                    cartError.textContent = 'Adicione pelo menos um item para retirada.';
+                    pickupInfo.style.display = 'none';
+                    return;
+                }
+
+                pickupInfo.style.display = 'block';
+                localStorage.setItem('orderType', 'pickup');
+            });
+        }
+
+        if (confirmPickupBtn) {
+            const pickupConfirmation = document.getElementById('pickup-confirmation');
+
+            confirmPickupBtn.addEventListener('click', () => {
+                if (Object.keys(cartItems).length === 0) {
+                    cartError.textContent = 'Adicione pelo menos um item antes de confirmar retirada.';
+                    return;
+                }
+
+                localStorage.setItem('cartData', JSON.stringify(cartItems));
+                localStorage.setItem('orderType', 'pickup');
+                if (pickupConfirmation) {
+                    pickupConfirmation.textContent = 'Retirada confirmada! Apresente este pedido na loja no horário informado.';
+                }
+            });
+        }
     }
 
     const freteForm = document.getElementById('frete-form');
@@ -315,6 +352,15 @@ document.addEventListener('DOMContentLoaded', () => {
         cartCount.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'itens'}`;
         cartTotal.textContent = `Total: ${totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
 
+        if (cartWidgetCount) {
+            cartWidgetCount.textContent = totalItems;
+        }
+
+        if (!hasItems && pickupInfo) {
+            pickupInfo.style.display = 'none';
+            localStorage.removeItem('orderType');
+        }
+
         buyNowLink.disabled = !hasItems;
 
         if (hasItems) {
@@ -323,5 +369,10 @@ document.addEventListener('DOMContentLoaded', () => {
             cartError.textContent = 'Adicione pelo menos um item para avançar.';
         }
     }
-});
 
+    if (cartWidget && document.querySelector('.cart-card')) {
+        cartWidget.addEventListener('click', () => {
+            document.querySelector('.cart-card').scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+});

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Los Docitos</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cloudflare.com">
 </head>
 <body>
     <header class="hero">
@@ -68,9 +69,27 @@
             <p id="cart-total">Total: R$ 0,00</p>
             <ul id="cart-items"></ul>
             <p id="cart-error" class="cart-error" aria-live="polite"></p>
-            <button class="buy-now-btn" id="buy-now-link" type="button">Comprar</button>
+
+            <div class="delivery-options">
+                <button class="buy-now-btn" id="buy-now-link" type="button">Delivery</button>
+                <button class="buy-now-btn secondary" id="pickup-btn" type="button">Retirada</button>
+            </div>
+
+            <div id="pickup-info" class="pickup-info" style="display: none;">
+                <h3>Ponto de retirada</h3>
+                <p>Retire seu pedido diretamente na loja.</p>
+                <p><strong>Endereço:</strong> Rua Otanilza Nunes de Lucena, 206, Apto 301 - Gramame</p>
+                <p><strong>Horário:</strong> Segunda a sábado, 12h às 20h</p>
+                <button class="buy-now-btn" id="confirm-pickup" type="button">Confirmar retirada</button>
+                <p id="pickup-confirmation" class="pickup-confirmation" aria-live="polite"></p>
+            </div>
         </section>
     </main>
+
+    <button class="cart-widget" id="cart-widget" type="button" aria-label="Abrir carrinho">
+        <span class="cart-widget-icon">🛒</span>
+        <span class="cart-widget-badge" id="cart-widget-count">0</span>
+    </button>
 
     <script src="script.js"></script>
 </body>
