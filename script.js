@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const buyNowLink = document.getElementById('buy-now-link');
     const cartWidgetCount = document.getElementById('cart-widget-count');
     const cartWidget = document.getElementById('cart-widget');
+    const pickupInfo = document.getElementById('pickup-info');
 
     const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink && cartWidgetCount);
     if (shouldInitCart) {
@@ -19,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const pickupBtn = document.getElementById('pickup-btn');
-        const pickupInfo = document.getElementById('pickup-info');
         const confirmPickupBtn = document.getElementById('confirm-pickup');
 
         buyNowLink.addEventListener('click', () => {
