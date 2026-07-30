@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartWidgetCount = document.getElementById('cart-widget-count');
     const cartWidget = document.getElementById('cart-widget');
     const pickupInfo = document.getElementById('pickup-info');
+    const whatsappNumber = '5581995687007';
 
     const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink && cartWidgetCount);
     if (shouldInitCart) {
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (confirmPickupBtn) {
             const pickupConfirmation = document.getElementById('pickup-confirmation');
+            const pickupPhoneInput = document.getElementById('pickup-phone');
 
             confirmPickupBtn.addEventListener('click', () => {
                 if (Object.keys(cartItems).length === 0) {
@@ -55,11 +57,62 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                const telefoneRaw = pickupPhoneInput ? pickupPhoneInput.value.trim() : '';
+                const telefoneCliente = telefoneRaw.replace(/\D/g, '');
+
+                if (!telefoneCliente || telefoneCliente.length < 10) {
+                    cartError.textContent = 'Por favor, insira um número de WhatsApp válido com DDD.';
+                    return;
+                }
+
+                let telefoneFormatado = telefoneCliente;
+                if (telefoneFormatado.length === 11 || telefoneFormatado.length === 10) {
+                    telefoneFormatado = '55' + telefoneFormatado;
+                }
+
+                // Gera código de retirada de 4 dígitos (ex: LD-4729)
+                const codigoRetirada = 'LD-' + Math.floor(1000 + Math.random() * 9000);
+
                 localStorage.setItem('cartData', JSON.stringify(cartItems));
                 localStorage.setItem('orderType', 'pickup');
+                localStorage.setItem('pickupCode', codigoRetirada);
+                localStorage.setItem('pickupPhone', telefoneCliente);
+
+                let subtotal = 0;
+                let listaItens = '';
+
+                Object.entries(cartItems).forEach(([nome, quantidade]) => {
+                    const valor = quantidade * 12;
+                    subtotal += valor;
+                    listaItens += `- ${nome}: ${quantidade}x\n`;
+                });
+
+                const mensagemLoja = encodeURIComponent(
+                    `Novo pedido para Retirada (Código: ${codigoRetirada})\n\n` +
+                    `Itens:\n${listaItens}\n` +
+                    `Total: R$ ${subtotal.toFixed(2).replace('.', ',')}\n\n` +
+                    `Cliente: ${telefoneCliente}`
+                );
+
+                const mensagemCliente = encodeURIComponent(
+                    `Olá! Seu pedido para Retirada na Los Docitos foi confirmado!\n\n` +
+                    `Código de Retirada: *${codigoRetirada}*\n` +
+                    `Apresente este código na loja no horário informado para retirar o seu pedido.\n` +
+                    `Obrigado pela preferência!`
+                );
+
+                const urlLoja = `https://wa.me/${whatsappNumber}?text=${mensagemLoja}`;
+                const urlCliente = `https://wa.me/${telefoneFormatado}?text=${mensagemCliente}`;
+
                 if (pickupConfirmation) {
-                    pickupConfirmation.textContent = 'Retirada confirmada! Apresente este pedido na loja no horário informado.';
+                    pickupConfirmation.innerHTML = `Retirada confirmada! Código: <strong>${codigoRetirada}</strong>. Abrindo o WhatsApp...`;
                 }
+
+                // Abre WhatsApp do cliente e redireciona para o WhatsApp da loja
+                window.open(urlCliente, '_blank', 'noopener,noreferrer');
+                setTimeout(() => {
+                    window.location.href = urlLoja;
+                }, 1000);
             });
         }
     }
@@ -99,8 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resumoPedido && confirmarBtn) {
             carregarResumo();
         }
-
-        const whatsappNumber = '5581995687007';
 
         function montarMensagemWhatsApp() {
             const cartData = localStorage.getItem('cartData');

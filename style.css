@@ -425,3 +425,23 @@ main {
     padding-top: 8px;
     border-top: 2px solid var(--pink);
 }
+
+.pickup-form {
+    text-align: left;
+    margin: 16px 0;
+    display: grid;
+    gap: 8px;
+}
+
+.pickup-form label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.pickup-form input {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e0c3b1;
+    font-size: 1rem;
+    width: 100%;
+}
