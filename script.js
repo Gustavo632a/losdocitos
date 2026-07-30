@@ -23,6 +23,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const pickupBtn = document.getElementById('pickup-btn');
         const confirmPickupBtn = document.getElementById('confirm-pickup');
 
+        function renderStoredPickupInfo() {
+            const pickupConfirmation = document.getElementById('pickup-confirmation');
+            const pickupPhoneInput = document.getElementById('pickup-phone');
+            const codigoSalvo = localStorage.getItem('pickupCode');
+
+            if (codigoSalvo && pickupConfirmation) {
+                pickupConfirmation.innerHTML = `Seu código de retirada está salvo: <strong>${codigoSalvo}</strong>. Apresente este código na loja.`;
+            }
+
+            if (pickupPhoneInput && localStorage.getItem('pickupPhone')) {
+                pickupPhoneInput.value = localStorage.getItem('pickupPhone');
+            }
+        }
+
         buyNowLink.addEventListener('click', () => {
             if (Object.keys(cartItems).length === 0) {
                 cartError.textContent = 'Adicione pelo menos um item para avançar.';
@@ -44,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 pickupInfo.style.display = 'block';
                 localStorage.setItem('orderType', 'pickup');
+                renderStoredPickupInfo();
             });
         }
 
@@ -77,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('orderType', 'pickup');
                 localStorage.setItem('pickupCode', codigoRetirada);
                 localStorage.setItem('pickupPhone', telefoneCliente);
+                localStorage.setItem('pickupGeneratedAt', new Date().toISOString());
 
                 let subtotal = 0;
                 let listaItens = '';
@@ -94,25 +110,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     `Cliente: ${telefoneCliente}`
                 );
 
-                const mensagemCliente = encodeURIComponent(
-                    `Olá! Seu pedido para Retirada na Los Docitos foi confirmado!\n\n` +
-                    `Código de Retirada: *${codigoRetirada}*\n` +
-                    `Apresente este código na loja no horário informado para retirar o seu pedido.\n` +
-                    `Obrigado pela preferência!`
-                );
-
                 const urlLoja = `https://wa.me/${whatsappNumber}?text=${mensagemLoja}`;
-                const urlCliente = `https://wa.me/${telefoneFormatado}?text=${mensagemCliente}`;
 
                 if (pickupConfirmation) {
-                    pickupConfirmation.innerHTML = `Retirada confirmada! Código: <strong>${codigoRetirada}</strong>. Abrindo o WhatsApp...`;
+                    pickupConfirmation.innerHTML = `Retirada confirmada! Código: <strong>${codigoRetirada}</strong>. Enviando para a loja...`;
                 }
 
-                // Abre WhatsApp do cliente e redireciona para o WhatsApp da loja
-                window.open(urlCliente, '_blank', 'noopener,noreferrer');
+                window.open(urlLoja, '_blank', 'noopener,noreferrer');
                 setTimeout(() => {
-                    window.location.href = urlLoja;
-                }, 1000);
+                    window.location.href = 'compra.html';
+                }, 1200);
             });
         }
     }
@@ -152,6 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resumoPedido && confirmarBtn) {
             carregarResumo();
         }
+
+        renderStoredPickupInfo();
 
         function montarMensagemWhatsApp() {
             const cartData = localStorage.getItem('cartData');
