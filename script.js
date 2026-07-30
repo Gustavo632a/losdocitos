@@ -1,3 +1,5 @@
+const whatsappNumber = '5581995687007';
+
 document.addEventListener('DOMContentLoaded', () => {
     const cartItems = {};
     const cartList = document.getElementById('cart-items');
@@ -8,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartWidgetCount = document.getElementById('cart-widget-count');
     const cartWidget = document.getElementById('cart-widget');
     const pickupInfo = document.getElementById('pickup-info');
-    const whatsappNumber = '5581995687007';
 
     const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink && cartWidgetCount);
     if (shouldInitCart) {
