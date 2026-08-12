@@ -1,3 +1,5 @@
+const whatsappNumber = '5581995687007';
+
 document.addEventListener('DOMContentLoaded', () => {
     const cartItems = {};
     const cartList = document.getElementById('cart-items');
@@ -8,7 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartWidgetCount = document.getElementById('cart-widget-count');
     const cartWidget = document.getElementById('cart-widget');
     const pickupInfo = document.getElementById('pickup-info');
-    const whatsappNumber = '5581995687007';
+
+    function renderStoredPickupInfo() {
+        const pickupConfirmation = document.getElementById('pickup-confirmation');
+        const pickupPhoneInput = document.getElementById('pickup-phone');
+        const codigoSalvo = localStorage.getItem('pickupCode');
+
+        if (codigoSalvo && pickupConfirmation) {
+            pickupConfirmation.innerHTML = `Seu código de retirada está salvo: <strong>${codigoSalvo}</strong>. Apresente este código na loja.`;
+        }
+
+        if (pickupPhoneInput && localStorage.getItem('pickupPhone')) {
+            pickupPhoneInput.value = localStorage.getItem('pickupPhone');
+        }
+    }
 
     const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink && cartWidgetCount);
     if (shouldInitCart) {
@@ -22,20 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pickupBtn = document.getElementById('pickup-btn');
         const confirmPickupBtn = document.getElementById('confirm-pickup');
-
-        function renderStoredPickupInfo() {
-            const pickupConfirmation = document.getElementById('pickup-confirmation');
-            const pickupPhoneInput = document.getElementById('pickup-phone');
-            const codigoSalvo = localStorage.getItem('pickupCode');
-
-            if (codigoSalvo && pickupConfirmation) {
-                pickupConfirmation.innerHTML = `Seu código de retirada está salvo: <strong>${codigoSalvo}</strong>. Apresente este código na loja.`;
-            }
-
-            if (pickupPhoneInput && localStorage.getItem('pickupPhone')) {
-                pickupPhoneInput.value = localStorage.getItem('pickupPhone');
-            }
-        }
 
         buyNowLink.addEventListener('click', () => {
             if (Object.keys(cartItems).length === 0) {

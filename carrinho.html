@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação do pedido - Los Docitos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="confirmation">
+    <main class="checkout-page">
+        <section class="checkout-card">
+            <h1>Confirme seu pedido</h1>
+            <p>Revise os itens selecionados e escolha o tipo de entrega.</p>
+
+            <section class="cart-card" aria-live="polite">
+                <h2>Seu pedido</h2>
+                <p id="cart-count">0 itens</p>
+                <p id="cart-total">Total: R$ 0,00</p>
+                <ul id="cart-items"></ul>
+                <p id="cart-error" class="cart-error" aria-live="polite"></p>
+
+                <div class="delivery-options">
+                    <button class="buy-now-btn" id="buy-now-link" type="button">Delivery</button>
+                    <button class="buy-now-btn secondary" id="pickup-btn" type="button">Retirada</button>
+                </div>
+
+                <div id="pickup-info" class="pickup-info" style="display: none;">
+                    <h3>Ponto de retirada</h3>
+                    <p>Retire seu pedido diretamente na loja.</p>
+                    <p><strong>Endereço:</strong> Rua Otanilza Nunes de Lucena, 206, Apto 301 - Gramame</p>
+                    <p><strong>Horário:</strong> Segunda a sábado, 12h às 20h</p>
+
+                    <div class="pickup-form">
+                        <label for="pickup-phone">Seu WhatsApp (com DDD)</label>
+                        <input id="pickup-phone" type="tel" placeholder="Ex: 81995687007" required>
+                    </div>
+
+                    <button class="buy-now-btn" id="confirm-pickup" type="button">Confirmar retirada</button>
+                    <p id="pickup-confirmation" class="pickup-confirmation" aria-live="polite"></p>
+                </div>
+            </section>
+
+            <a class="back-link" href="index.html">Voltar para a página inicial</a>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
