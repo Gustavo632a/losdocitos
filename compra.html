@@ -22,50 +22,16 @@
                 </div>
             </div>
 
-            <div id="pickup-code-box" style="display: none; margin-top: 20px; padding: 16px; border: 2px dashed #c97b2a; border-radius: 12px; background: #fff8ef;">
+            <div id="pickup-code-box">
                 <h3>Código de retirada</h3>
                 <p>Apresente este código na loja quando for fazer a retirada.</p>
-                <p style="font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; color: #c97b2a; margin: 8px 0 0;" id="pickup-code"></p>
+                <p style="font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; color: #AF2628; margin: 8px 0 0;" id="pickup-code"></p>
             </div>
 
             <a class="back-link" href="index.html">Voltar para a página inicial</a>
         </section>
     </main>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const cartData = localStorage.getItem('cartData');
-            const carrinhoFinal = document.getElementById('carrinho-final');
-            const freteValue = localStorage.getItem('freteValue') || '0';
-            const pickupCodeBox = document.getElementById('pickup-code-box');
-            const pickupCodeElement = document.getElementById('pickup-code');
-            const orderType = localStorage.getItem('orderType');
-            const pickupCode = localStorage.getItem('pickupCode');
-            let subtotal = 0;
-
-            if (cartData) {
-                const items = JSON.parse(cartData);
-                Object.entries(items).forEach(([nome, quantidade]) => {
-                    const valor = quantidade * 12;
-                    subtotal += valor;
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span>${nome}</span> <span>${quantidade}x R$ 12,00 = R$ ${valor.toFixed(2).replace('.', ',')}</span>`;
-                    carrinhoFinal.appendChild(li);
-                });
-            }
-
-            const frete = parseFloat(freteValue);
-            const total = subtotal + frete;
-
-            document.getElementById('subtotal-final').textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
-            document.getElementById('frete-final').textContent = frete === 0 ? 'A calcular' : `R$ ${frete.toFixed(2).replace('.', ',')}`;
-            document.getElementById('total-final-compra').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
-
-            if (orderType === 'pickup' && pickupCode && pickupCodeBox && pickupCodeElement) {
-                pickupCodeBox.style.display = 'block';
-                pickupCodeElement.textContent = pickupCode;
-            }
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

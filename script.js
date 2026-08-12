@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('pickupCode', codigoRetirada);
                 localStorage.setItem('pickupPhone', telefoneCliente);
                 localStorage.setItem('pickupGeneratedAt', new Date().toISOString());
+                localStorage.setItem('freteValue', '0');
+                localStorage.removeItem('enderecoEntrega');
 
                 let subtotal = 0;
                 let listaItens = '';
@@ -435,5 +437,57 @@ document.addEventListener('DOMContentLoaded', () => {
         cartWidget.addEventListener('click', () => {
             document.querySelector('.cart-card').scrollIntoView({ behavior: 'smooth' });
         });
+    }
+
+    const compraFinalElement = document.getElementById('carrinho-final');
+    if (compraFinalElement) {
+        const cartData = localStorage.getItem('cartData');
+        const carrinhoFinal = document.getElementById('carrinho-final');
+        const freteValue = localStorage.getItem('freteValue') || '0';
+        const orderType = localStorage.getItem('orderType');
+        const isPickup = orderType === 'pickup';
+        const pickupCodeBox = document.getElementById('pickup-code-box');
+        const pickupCodeElement = document.getElementById('pickup-code');
+        const pickupCode = localStorage.getItem('pickupCode');
+        let subtotal = 0;
+
+        if (cartData && carrinhoFinal) {
+            const items = JSON.parse(cartData);
+            Object.entries(items).forEach(([nome, quantidade]) => {
+                const valor = quantidade * 12;
+                subtotal += valor;
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${nome}</span> <span>${quantidade}x R$ 12,00 = R$ ${valor.toFixed(2).replace('.', ',')}</span>`;
+                carrinhoFinal.appendChild(li);
+            });
+        }
+
+        const frete = isPickup ? 0 : parseFloat(freteValue);
+        const total = subtotal + frete;
+
+        const subtotalFinal = document.getElementById('subtotal-final');
+        const freteFinal = document.getElementById('frete-final');
+        const totalFinal = document.getElementById('total-final-compra');
+
+        if (subtotalFinal) {
+            subtotalFinal.textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+        }
+
+        if (freteFinal) {
+            freteFinal.textContent = isPickup
+                ? 'Sem frete (Retirada)'
+                : frete === 0
+                    ? 'A calcular'
+                    : `R$ ${frete.toFixed(2).replace('.', ',')}`;
+        }
+
+        if (totalFinal) {
+            totalFinal.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+        }
+
+        if (isPickup && pickupCode && pickupCodeBox && pickupCodeElement) {
+            pickupCodeBox.style.display = 'block';
+            pickupCodeElement.textContent = pickupCode;
+        }
     }
 });

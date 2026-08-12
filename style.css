@@ -13,12 +13,12 @@
 body {
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #fff9f1 0%, #ffe8d7 100%);
+    background: #ee9a9d;
     color: var(--brown);
 }
 
 .hero {
-    background: linear-gradient(135deg, #fff1dc 0%, #f6c2a9 55%, #c97143 100%);
+    background: #ee9a9d;
     padding: 80px 24px 100px;
     text-align: center;
 }
@@ -26,7 +26,7 @@ body {
 .hero-content {
     max-width: 700px;
     margin: 0 auto;
-    background: rgba(255, 255, 255, 0.75);
+    background: rgba(241, 233, 220, 0.9);
     backdrop-filter: blur(8px);
     border-radius: 24px;
     padding: 36px;
@@ -39,16 +39,16 @@ body {
 
 .logo {
     display: block;
-    width: 180px;
+    width: 260px;
     height: auto;
-    margin: 0 auto 18px;
-    border-radius: 18px;
+    margin: 0 auto -30px;
+    border-radius: 4px;
 }
 
 .tag {
     display: inline-block;
-    background: var(--caramel);
-    color: white;
+    background: rgba(190, 79, 80, 1);
+    color: rgba(241, 233, 220, 1);
     padding: 8px 16px;
     border-radius: 999px;
     font-size: 0.9rem;
@@ -59,8 +59,8 @@ body {
 
 h1 {
     font-size: 3rem;
-    margin: 0 0 12px;
-    color: var(--brown);
+    margin: 0 0 0px;
+    color: rgba(190, 79, 80, 1);
 }
 
 .hero p {
@@ -72,7 +72,7 @@ h1 {
 .btn {
     display: inline-block;
     text-decoration: none;
-    background: var(--brown);
+    background: rgba(190, 79, 80, 0.8);
     color: white;
     padding: 12px 24px;
     border-radius: 999px;
@@ -105,7 +105,7 @@ main {
 
 .card h3 {
     margin-top: 0;
-    color: var(--caramel);
+    color: #BE4F50;
 }
 
 .menu {
@@ -117,6 +117,7 @@ main {
     text-align: center;
     font-size: 2rem;
     margin-bottom: 24px;
+    color: #820b0d;
 }
 
 .cards {
@@ -126,7 +127,8 @@ main {
 }
 
 .item {
-    background: var(--soft);
+
+    background: #F0E0D4;
     border: 1px solid #f0d0bf;
     border-radius: 18px;
     padding: 20px;
@@ -138,7 +140,7 @@ main {
 
 .item h3 {
     margin-bottom: 8px;
-    color: var(--brown);
+    color: #BE4F50;
 }
 
 .item p {
@@ -158,7 +160,7 @@ main {
     margin-top: auto;
     border: none;
     border-radius: 999px;
-    background: var(--caramel);
+    background: #BE4F50;
     color: white;
     padding: 10px 14px;
     font-weight: 600;
@@ -181,7 +183,7 @@ main {
 
 .cart-card h2 {
     margin-top: 0;
-    color: var(--brown);
+    color: #a73c41;
 }
 
 #cart-items {
@@ -212,7 +214,7 @@ main {
     border-radius: 50%;
     width: 28px;
     height: 28px;
-    background: var(--caramel);
+    background: #AF2628;
     color: white;
     cursor: pointer;
     font-weight: 700;
@@ -223,7 +225,7 @@ main {
     margin-top: 16px;
     border: none;
     text-decoration: none;
-    background: var(--brown);
+    background: #BE4F50;
     color: white;
     padding: 12px 20px;
     border-radius: 999px;
@@ -233,16 +235,16 @@ main {
 }
 
 .buy-now-btn:hover {
-    background: #4f2d18;
+    background: #471718;
     transform: translateY(-2px);
 }
 
 .buy-now-btn.secondary {
-    background: #e3a074;
+    background: #af2628;
 }
 
 .buy-now-btn.secondary:hover {
-    background: #c88767;
+    background: #471516;
 }
 
 .delivery-options {
@@ -277,7 +279,7 @@ main {
     height: 62px;
     border: none;
     border-radius: 50%;
-    background: var(--brown);
+    background: rgb(77, 11, 14);
     color: white;
     display: grid;
     place-items: center;
@@ -361,7 +363,7 @@ main {
 .frete-form button {
     border: none;
     border-radius: 999px;
-    background: var(--caramel);
+    background: #AF2628;
     color: white;
     padding: 12px 16px;
     font-weight: 600;
@@ -391,7 +393,7 @@ main {
 
 .resumo-pedido h2 {
     font-size: 1.3rem;
-    color: var(--brown);
+    color: #AF2628;
     margin: 0 0 16px;
     text-align: center;
 }
@@ -428,6 +430,24 @@ main {
     margin: 8px 0;
     display: flex;
     justify-content: space-between;
+}
+
+#pickup-code-box {
+    display: none;
+    margin-top: 20px;
+    padding: 16px;
+    border: 2px dashed #c97b2a;
+    border-radius: 12px;
+    background: #fff8ef;
+    text-align: left;
+}
+
+#pickup-code-box h3 {
+    margin-top: 0;
+}
+
+#pickup-code-box p {
+    margin: 0.5rem 0;
 }
 
 .total-final {
