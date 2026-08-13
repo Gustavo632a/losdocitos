@@ -1,6 +1,85 @@
 const whatsappNumber = '5581995687007';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ============== MENU NAVIGATION ==============
+    const menuToggle = document.getElementById('menu-toggle');
+    const menuNav = document.getElementById('menu-nav');
+    const menuLinks = document.querySelectorAll('.menu-link');
+    const cardsContainer = document.querySelector('.cards');
+    const items = document.querySelectorAll('.item');
+
+    // Função para abrir/fechar menu hamburger
+    if (menuToggle && menuNav) {
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('active');
+            menuNav.classList.toggle('active');
+        });
+
+        // Fechar menu quando clica em um link
+        menuLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                const category = link.dataset.category;
+                
+                // Atualizar links ativos
+                menuLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                
+                // Filtrar itens por categoria
+                filterItemsByCategory(category);
+                
+                // Fechar menu mobile
+                if (window.innerWidth <= 768) {
+                    menuToggle.classList.remove('active');
+                    menuNav.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    // Função para filtrar itens por categoria
+    function filterItemsByCategory(category) {
+        items.forEach(item => {
+            const itemCategory = item.dataset.category;
+            
+            if (category === 'todos') {
+                item.style.display = 'block';
+                item.style.animation = 'fadeIn 0.3s ease';
+            } else if (itemCategory === category) {
+                item.style.display = 'block';
+                item.style.animation = 'fadeIn 0.3s ease';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Fechar menu ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.menu-container') && menuNav && menuNav.classList.contains('active')) {
+            menuToggle.classList.remove('active');
+            menuNav.classList.remove('active');
+        }
+    });
+
+    // Adicionar animação CSS para fade in
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // ============== CARRINHO ==============
     const cartItems = {};
     const cartList = document.getElementById('cart-items');
     const cartCount = document.getElementById('cart-count');

@@ -38,26 +38,39 @@
 
         <section class="menu" id="sabores">
             <h2>Nossos sabores</h2>
+            <div class="menu-container">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <nav class="menu-nav" id="menu-nav">
+                    <a href="#" class="menu-link active" data-category="bolos">Bolos de Pote</a>
+                    <a href="#" class="menu-link" data-category="pudim">Pudim</a>
+                    <a href="#" class="menu-link" data-category="brigadeiro">Brigadeiro</a>
+                    <a href="#" class="menu-link" data-category="todos">Ver Todos</a>
+                </nav>
+            </div>
             <div class="cards">
-                <article class="item">
+                <article class="item" data-category="bolos">
                     <h3>Chocolate</h3>
                     <img class="item-image" src="assets/bolochocolate.png" alt="Bolo de pote sabor Chocolate">
                     <p>Creme intenso, cobertura de brigadeiro e pedaços de bolo macios.</p>
                     <button class="buy-btn" data-name="Chocolate" data-price="12">Adicionar · R$ 12,00</button>
                 </article>
-                <article class="item">
+                <article class="item" data-category="bolos">
                     <h3>Prestígio</h3>
                     <img class="item-image" src="assets/prestigio.png" alt="Bolo de pote sabor Prestígio.">
                     <p>Chocolate com coco, uma combinação cremosa e irresistível.</p>
                     <button class="buy-btn" data-name="Prestígio" data-price="12">Adicionar · R$ 12,00</button>
                 </article>
-                <article class="item">
+                <article class="item" data-category="bolos">
                     <h3>Ninho</h3>
                     <img class="item-image" src="assets/limao.png" alt="Bolo de pote sabor Ninho.">
                     <p>Leite condensado e sabor delicado, perfeito para quem ama um doce suave.</p>
                     <button class="buy-btn" data-name="Ninho" data-price="12">Adicionar · R$ 12,00</button>
                 </article>
-                <article class="item">
+                <article class="item" data-category="bolos">
                     <h3>Limão</h3>
                     <img class="item-image" src="assets/limao.png" alt="Bolo de pote sabor Limão.">
                     <p>Refrescante e leve, com um toque cítrico que equilibra muito bem.</p>
