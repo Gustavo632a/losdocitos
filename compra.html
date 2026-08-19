@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compra - Los Docitos</title>
+    <title>Pagamento - Los Docitos</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
 <body>
     <main class="checkout-page">
         <section class="checkout-card">
-            <h1>Pedido confirmado!</h1>
-            <p>Seu pedido está sendo preparado com carinho na Los Docitos.</p>
+            <h1 id="checkout-main-title">Quase lá!</h1>
+            <p id="checkout-main-subtitle">Por favor, selecione a forma de pagamento para finalizar seu pedido na Los Docitos.</p>
             
             <div id="resumo-final" class="resumo-pedido">
                 <h2>Resumo do pedido</h2>
@@ -22,16 +23,122 @@
                 </div>
             </div>
 
-            <div id="pickup-code-box">
-                <h3>Código de retirada</h3>
-                <p>Apresente este código na loja quando for fazer a retirada.</p>
-                <p style="font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; color: #AF2628; margin: 8px 0 0;" id="pickup-code"></p>
+            <!-- Seleção de Métodos de Pagamento -->
+            <div class="method-tabs" id="payment-method-selector">
+                <button type="button" class="method-tab active" id="tab-pix">📱 Pix</button>
+                <button type="button" class="method-tab" id="tab-card">💳 Cartão de Crédito</button>
             </div>
 
-            <a class="back-link" href="index.html">Voltar para a página inicial</a>
+            <!-- Container Único de Pagamento -->
+            <div class="pix-container" id="payment-container-box">
+                <div class="pix-title" id="payment-box-title">
+                    📱 Pagamento por Pix
+                </div>
+
+                <!-- Formulário Único para Checkout -->
+                <form id="checkout-form" class="checkout-form">
+                    <p class="payment-helper-text">
+                        Preencha os dados abaixo para gerar a cobrança oficial.
+                    </p>
+                    
+                    <label for="buyer-name">Nome Completo</label>
+                    <input type="text" id="buyer-name" placeholder="Ex: Maria Silva" required>
+
+                    <label for="buyer-email">E-mail</label>
+                    <input type="email" id="buyer-email" placeholder="Ex: maria@email.com" required>
+
+                    <!-- Campo CPF - Apenas para Pix -->
+                    <div id="cpf-field-container">
+                        <label for="buyer-cpf">CPF (apenas números)</label>
+                        <input type="text" id="buyer-cpf" placeholder="Ex: 12345678909" pattern="\d{11}" title="Digite 11 números">
+                    </div>
+
+                    <div id="card-field-container" style="display: none;">
+                        <label for="card-name">Nome impresso no cartão</label>
+                        <input type="text" id="card-name" autocomplete="cc-name" placeholder="Ex: Maria Silva">
+
+                        <!-- Containers para os Mercado Pago Fields -->
+                        <label>Número do cartão</label>
+                        <div id="cardNumber" class="mp-field" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 14px;"></div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                            <div>
+                                <label>Validade</label>
+                                <div id="cardExpiryDate" class="mp-field" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></div>
+                            </div>
+                            <div>
+                                <label>CVV</label>
+                                <div id="cardCvv" class="mp-field" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></div>
+                            </div>
+                        </div>
+
+                        <label for="card-installments">Parcelas</label>
+                        <select id="card-installments">
+                            <option value="1">1x sem juros</option>
+                            <option value="2">2x sem juros</option>
+                            <option value="3">3x sem juros</option>
+                            <option value="4">4x sem juros</option>
+                            <option value="5">5x sem juros</option>
+                            <option value="6">6x sem juros</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-payment-action" id="btn-submit-payment">Gerar Pix</button>
+                </form>
+
+                <!-- Área do Pix QR Code (Oculta) -->
+                <div id="pix-qr-area" class="qr-code-box" style="display: none;">
+                    <p style="font-size: 0.95rem; font-weight: 500;">Escaneie o QR Code abaixo:</p>
+                    <img id="qr-code-img" class="qr-code-img" src="" alt="QR Code Pix">
+                    
+                    <p style="font-size: 0.95rem; font-weight: 500;">Ou use o Pix Copia e Cola:</p>
+                    <div class="copia-cola-box">
+                        <input type="text" id="copia-cola-text" class="copia-cola-input" readOnly>
+                        <button class="btn-copiar" id="btn-copiar-code">Copiar</button>
+                    </div>
+                    <span id="copy-feedback" class="copy-feedback">Código copiado!</span>
+
+                    <div id="status-container">
+                        <div class="status-badge status-pending">
+                            <span class="loading-spinner"></span>
+                            Aguardando confirmação do pagamento...
+                        </div>
+                    </div>
+                    
+                    <div id="simulation-alert" class="simulation-alert">
+                        💡 <strong>Modo de Teste Ativo:</strong> O pagamento Pix será aprovado automaticamente em 15 segundos!
+                    </div>
+                </div>
+
+                <!-- Área do Cartão de Crédito (Oculta) -->
+                <div id="card-checkout-area" class="credit-card-box" style="display: none;">
+                    <div id="card-payment-status" style="text-align: center;">
+                        <span class="loading-spinner" style="display: inline-block; margin-right: 8px;"></span>
+                        <span>Processando pagamento...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Código de Retirada (Se for retirada) -->
+            <div id="pickup-code-box" style="display: none; margin-top: 20px; padding: 16px; border: 2px dashed #c97b2a; border-radius: 12px; background: #fff8ef; text-align: center;">
+                <h3>Código de retirada</h3>
+                <p>Guarde este código para apresentar na retirada.</p>
+                <p style="font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; color: #c97b2a; margin: 8px 0 0;" id="pickup-code"></p>
+            </div>
+
+            <!-- Botão do WhatsApp (Pós-Pagamento) -->
+            <div id="whatsapp-completion-area" style="display: none; margin-top: 20px;">
+                <div id="payment-success-message" class="payment-success-message">
+                    🎉 Pagamento Confirmado com Sucesso!
+                </div>
+                <button class="btn-whatsapp-success" id="btn-enviar-wa">
+                    <span>💬</span> Enviar Detalhes do Pedido para o WhatsApp da Loja
+                </button>
+            </div>
+
+            <a class="back-link" href="index.html" style="display: block; text-align: center; margin-top: 24px;">Voltar para a página inicial</a>
         </section>
     </main>
-
     <script src="script.js"></script>
 </body>
 </html>
