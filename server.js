@@ -329,6 +329,7 @@ app.post('/api/processar-pagamento-cartao', async (req, res) => {
 // =============================================
 // Iniciar Servidor
 // =============================================
+if (require.main === module) {
 app.listen(PORT, () => {
     console.log(`\n======================================================`);
     console.log(`🚀 Servidor Los Docitos rodando na porta ${PORT}`);
@@ -336,3 +337,6 @@ app.listen(PORT, () => {
     console.log(`⚙️  Modo: ${process.env.MP_ACCESS_TOKEN && !process.env.MP_ACCESS_TOKEN.startsWith('SEU_') ? 'Mercado Pago API (Produção/Sandbox)' : 'Simulador Offline'}`);
     console.log(`======================================================\n`);
 });
+}
+
+module.exports = app;
