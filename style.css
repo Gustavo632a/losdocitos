@@ -598,22 +598,30 @@ main {
     justify-content: space-between;
 }
 
-#pickup-code-box {
+.pickup-code-box {
     display: none;
     margin-top: 20px;
     padding: 16px;
-    border: 2px dashed #c97b2a;
+    border: 2px dashed var(--caramel);
     border-radius: 12px;
-    background: #fff8ef;
-    text-align: left;
+    background: var(--soft);
+    text-align: center;
 }
 
-#pickup-code-box h3 {
+.pickup-code-box h3 {
     margin-top: 0;
 }
 
-#pickup-code-box p {
+.pickup-code-box p {
     margin: 0.5rem 0;
+}
+
+.pickup-code-box .pickup-code {
+    margin: 8px 0 0;
+    color: var(--caramel);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
 }
 
 .total-final {
@@ -650,61 +658,61 @@ main {
     display: flex;
     gap: 10px;
     margin-top: 20px;
-    border-bottom: 2px solid #f0e6df;
-    padding-bottom: 10px;
+    padding: 4px;
+    border: 1px solid #e0c3b1;
+    border-radius: 12px;
+    background: var(--soft);
 }
 
 .method-tab {
     flex: 1;
     padding: 12px 14px;
-    border: 1px solid #e8d0b7;
-    border-radius: 999px;
-    background: #fff7f1;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
     color: var(--brown);
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: center;
-    box-shadow: 0 4px 12px rgba(111, 62, 36, 0.06);
+    box-shadow: none;
 }
 
 .method-tab:hover {
-    transform: translateY(-1px);
-    border-color: #d8aa8d;
+    background: #fff;
+    border-color: #e0c3b1;
 }
 
 .method-tab.active {
-    background: linear-gradient(135deg, #BE4F50 0%, #AF2628 100%);
+    background: #AF2628;
     color: #fff;
     border-color: #AF2628;
-    box-shadow: 0 10px 20px rgba(175, 38, 40, 0.2);
+    box-shadow: none;
 }
 
 .pix-container {
     margin-top: 16px;
-    padding: 24px;
-    border-radius: 18px;
-    background: #fffaf7;
-    box-shadow: 0 8px 20px rgba(111, 62, 36, 0.06);
-    border: 1px solid #f1e3d8;
-    text-align: center;
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--soft);
+    border: 1px solid #e0c3b1;
+    text-align: left;
 }
 
 .pix-title {
-    color: var(--caramel);
-    font-size: 1.3rem;
+    color: #AF2628;
+    font-size: 1.15rem;
     font-weight: 700;
     margin-bottom: 8px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 8px;
 }
 
 .checkout-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    gap: 10px;
     text-align: left;
     margin-top: 16px;
 }
@@ -712,7 +720,7 @@ main {
 .checkout-form label {
     font-weight: 600;
     font-size: 0.9rem;
-    color: #555;
+    color: var(--brown);
 }
 
 .checkout-form input {
@@ -724,14 +732,46 @@ main {
     color: var(--brown);
 }
 
+.checkout-form select,
+.mp-field {
+    min-height: 46px;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e0c3b1;
+    border-radius: 10px;
+    font-size: 1rem;
+    background: #fff;
+    color: var(--brown);
+}
+
+.checkout-form input:focus,
+.checkout-form select:focus,
+.mp-field:focus-within {
+    outline: 2px solid rgba(175, 38, 40, 0.22);
+    outline-offset: 1px;
+    border-color: #AF2628;
+}
+
+.card-fields-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.card-fields-row > div {
+    display: grid;
+    gap: 10px;
+}
+
 .payment-helper-text {
     font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 8px;
+    color: #6f3e24;
+    margin: 0 0 4px;
+    line-height: 1.45;
 }
 
 .btn-payment-action {
-    background: linear-gradient(135deg, #BE4F50 0%, #AF2628 100%);
+    background: #AF2628;
     color: white;
     border: none;
     padding: 14px 18px;
@@ -741,12 +781,12 @@ main {
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     width: 100%;
-    box-shadow: 0 10px 18px rgba(190, 79, 80, 0.2);
+    box-shadow: none;
 }
 
 .btn-payment-action:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 20px rgba(190, 79, 80, 0.28);
+    background: #8f1e20;
 }
 
 .btn-payment-action:disabled {
@@ -761,6 +801,17 @@ main {
     align-items: center;
     gap: 16px;
     margin-top: 16px;
+    padding: 16px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e0c3b1;
+    text-align: center;
+}
+
+.qr-instruction {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
 .qr-code-img {
@@ -924,4 +975,47 @@ main {
     margin-bottom: 16px;
     font-weight: bold;
     text-align: center;
+}
+
+.whatsapp-completion-area {
+    display: none;
+    margin-top: 20px;
+}
+
+.checkout-back-link {
+    display: block;
+    margin-top: 24px;
+    text-align: center;
+}
+
+@media (max-width: 480px) {
+    .checkout-card {
+        padding: 24px 16px;
+        border-radius: 18px;
+    }
+
+    .method-tabs {
+        gap: 4px;
+    }
+
+    .method-tab {
+        padding: 11px 8px;
+        font-size: 0.88rem;
+    }
+
+    .pix-container {
+        padding: 16px;
+    }
+
+    .card-fields-row {
+        grid-template-columns: 1fr;
+    }
+
+    .copia-cola-box {
+        flex-direction: column;
+    }
+
+    .btn-copiar {
+        min-height: 42px;
+    }
 }
