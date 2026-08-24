@@ -1,4 +1,19 @@
 const whatsappNumber = '5581995687007';
+const PRODUCT_PRICES = Object.freeze({
+    Chocolate: 12,
+    'Prestígio': 12,
+    Ninho: 12,
+    'Limão': 12,
+    Pudim: 12,
+});
+
+function getProductPrice(name) {
+    return PRODUCT_PRICES[name] ?? 12;
+}
+
+function formatPrice(value) {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const menuToggle = document.getElementById('menu-toggle');
@@ -90,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cartList.innerHTML = '';
 
         entries.forEach(([name, quantity]) => {
-            const itemPrice = 15 * quantity;
+            const itemPrice = getProductPrice(name) * quantity;
             totalItems += quantity;
             totalPrice += itemPrice;
 
@@ -211,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let subtotal = 0;
                 let listaItens = '';
                 Object.entries(cartItems).forEach(([nome, quantidade]) => {
-                    const valor = quantidade * 15;
+                    const valor = getProductPrice(nome) * quantidade;
                     subtotal += valor;
                     listaItens += `- ${nome}: ${quantidade}x\n`;
                 });
@@ -256,10 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
             carrinhoResumo.innerHTML = '';
 
             Object.entries(carrinhoItems).forEach(([nome, quantidade]) => {
-                const valor = quantidade * 15;
+                const valor = getProductPrice(nome) * quantidade;
                 subtotal += valor;
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${nome}</span> <span>${quantidade}x R$ 15,00 = R$ ${valor.toFixed(2).replace('.', ',')}</span>`;
+                li.innerHTML = `<span>${nome}</span> <span>${quantidade}x ${formatPrice(getProductPrice(nome))} = ${formatPrice(valor)}</span>`;
                 carrinhoResumo.appendChild(li);
             });
 
@@ -279,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let listaItens = '';
 
             Object.entries(carrinhoItems).forEach(([nome, quantidade]) => {
-                const valor = quantidade * 15;
+                const valor = getProductPrice(nome) * quantidade;
                 subtotal += valor;
                 listaItens += `- ${nome}: ${quantidade}x\n`;
             });
@@ -453,10 +468,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cartData && carrinhoFinal) {
             const items = JSON.parse(cartData);
             Object.entries(items).forEach(([nome, quantidade]) => {
-                const valor = quantidade * 15;
+                const valor = getProductPrice(nome) * quantidade;
                 subtotal += valor;
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${nome}</span> <span>${quantidade}x R$ 15,00 = R$ ${valor.toFixed(2).replace('.', ',')}</span>`;
+                li.innerHTML = `<span>${nome}</span> <span>${quantidade}x ${formatPrice(getProductPrice(nome))} = ${formatPrice(valor)}</span>`;
                 carrinhoFinal.appendChild(li);
             });
         }
@@ -685,8 +700,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (cartData) {
                 const items = JSON.parse(cartData);
-                Object.entries(items).forEach(([_, quantidade]) => {
-                    subtotal += quantidade * 15;
+                Object.entries(items).forEach(([nome, quantidade]) => {
+                    subtotal += getProductPrice(nome) * quantidade;
                 });
             }
 
