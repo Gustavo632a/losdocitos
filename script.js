@@ -1,9 +1,9 @@
 const whatsappNumber = '5581995687007';
 const PRODUCT_PRICES = Object.freeze({
-    Chocolate: 12,
-    'Prestígio': 12,
-    Ninho: 12,
-    'Limão': 12,
+    Chocolate: 15,
+    'Prestígio': 15,
+    Ninho: 15,
+    'Limão': 15,
     Pudim: 12,
 });
 
