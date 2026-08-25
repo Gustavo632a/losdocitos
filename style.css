@@ -230,6 +230,17 @@ main {
     color: #BE4F50;
 }
 
+.promotion-notice {
+    margin: 16px auto 0;
+    max-width: 620px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #fff3cd;
+    color: #856404;
+    text-align: center;
+    font-weight: 600;
+}
+
 .cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -265,6 +276,83 @@ main {
 .item h3 {
     margin-bottom: 8px;
     color: #BE4F50;
+}
+
+.promotion-item {
+    border: 2px solid #BE4F50;
+    background: linear-gradient(135deg, #fff3ed 0%, #f7ddd1 100%);
+}
+
+.promotion-badge {
+    align-self: flex-start;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #BE4F50;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.combo-flavor-dialog {
+    width: min(92vw, 380px);
+    padding: 0;
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(63, 29, 18, 0.3);
+    color: var(--brown);
+}
+
+.combo-flavor-dialog::backdrop {
+    background: rgba(58, 30, 22, 0.52);
+}
+
+.combo-flavor-dialog form {
+    display: grid;
+    gap: 10px;
+    padding: 24px;
+    position: relative;
+}
+
+.combo-flavor-dialog h2,
+.combo-flavor-dialog p {
+    margin: 0;
+}
+
+.combo-flavor-dialog p {
+    margin-bottom: 8px;
+    line-height: 1.45;
+}
+
+.combo-flavor-dialog label {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.combo-flavor-dialog select {
+    padding: 11px 12px;
+    border: 1px solid #e0c3b1;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--brown);
+    font-size: 1rem;
+}
+
+.combo-flavor-dialog .buy-btn {
+    margin-top: 10px;
+}
+
+.dialog-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--brown);
+    font-size: 1.8rem;
+    cursor: pointer;
 }
 
 .item p {

@@ -5,9 +5,13 @@ const PRODUCT_PRICES = Object.freeze({
     Ninho: 15,
     'Limão': 15,
     Pudim: 12,
+    'Combo Doce (pudim e bolo de pote)': 25,
 });
 
 function getProductPrice(name) {
+    if (name.startsWith('Combo Doce:')) {
+        return 25;
+    }
     return PRODUCT_PRICES[name] ?? 12;
 }
 
@@ -20,6 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuNav = document.getElementById('menu-nav');
     const menuLinks = document.querySelectorAll('.menu-link');
     const items = document.querySelectorAll('.item');
+    const promotionNotice = document.getElementById('promotion-notice');
+    const promotionDays = [3, 6];
+    const isPromotionDay = promotionDays.includes(new Date().getDay());
+
+    function setPromotionNotice(message = '') {
+        if (!promotionNotice) return;
+        promotionNotice.textContent = message;
+        promotionNotice.hidden = !message;
+    }
+
+    items.forEach((item) => {
+        if (item.dataset.category === 'promocoes') item.hidden = !isPromotionDay;
+    });
 
     if (menuToggle && menuNav) {
         menuToggle.addEventListener('click', () => {
@@ -35,12 +52,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 menuLinks.forEach((itemLink) => itemLink.classList.remove('active'));
                 link.classList.add('active');
 
+                setPromotionNotice(
+                    category === 'promocoes' && !isPromotionDay
+                        ? 'As promoções são válidas somente às quartas e sábados. Volte nesses dias para aproveitar!'
+                        : ''
+                );
+
                 items.forEach((item) => {
                     const itemCategory = item.dataset.category;
-                    if (category === 'todos' || itemCategory === category) {
+                    const isAvailable = itemCategory !== 'promocoes' || isPromotionDay;
+                    if ((category === 'todos' || itemCategory === category) && isAvailable) {
+                        item.hidden = false;
                         item.style.display = 'block';
                         item.style.animation = 'fadeIn 0.3s ease';
                     } else {
+                        item.hidden = true;
                         item.style.display = 'none';
                     }
                 });
@@ -78,6 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartWidgetCount = document.getElementById('cart-widget-count');
     const cartWidget = document.getElementById('cart-widget');
     const pickupInfo = document.getElementById('pickup-info');
+    const comboFlavorDialog = document.getElementById('combo-flavor-dialog');
+    const comboFlavorForm = document.getElementById('combo-flavor-form');
+    const closeComboDialog = document.getElementById('close-combo-dialog');
 
     function renderStoredPickupInfo() {
         const pickupConfirmation = document.getElementById('pickup-confirmation');
@@ -162,13 +191,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink && cartWidgetCount);
     if (shouldInitCart) {
-        document.querySelectorAll('.buy-btn').forEach((button) => {
+        document.querySelectorAll('.item .buy-btn').forEach((button) => {
             button.addEventListener('click', () => {
+                const availableDays = button.closest('.item')?.dataset.availableDays;
+                if (availableDays && !availableDays.split(',').map(Number).includes(new Date().getDay())) {
+                    cartError.textContent = 'Esta promoção é válida somente às quartas e sábados.';
+                    return;
+                }
+
+                if (button.closest('.promotion-item') && comboFlavorDialog) {
+                    comboFlavorDialog.showModal();
+                    return;
+                }
+
                 const name = button.dataset.name;
                 cartItems[name] = (cartItems[name] || 0) + 1;
                 renderCart();
             });
         });
+
+        if (closeComboDialog && comboFlavorDialog) {
+            closeComboDialog.addEventListener('click', () => comboFlavorDialog.close());
+        }
+
+        if (comboFlavorForm && comboFlavorDialog) {
+            comboFlavorForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const firstFlavor = document.getElementById('combo-flavor-one').value;
+                const comboName = `Combo Doce: Pudim + ${firstFlavor}`;
+
+                cartItems[comboName] = (cartItems[comboName] || 0) + 1;
+                comboFlavorDialog.close();
+                renderCart();
+            });
+        }
 
         const pickupBtn = document.getElementById('pickup-btn');
         const confirmPickupBtn = document.getElementById('confirm-pickup');

@@ -51,8 +51,10 @@
                     <a href="#" class="menu-link" data-category="bolos">Bolos de Pote</a>
                     <a href="#" class="menu-link" data-category="pudim">Pudim</a>
                     <a href="#" class="menu-link" data-category="Cookies">Cookies</a>
+                    <a href="#" class="menu-link promo-menu-link" data-category="promocoes">Promoções</a>
                 </nav>
             </div>
+            <p id="promotion-notice" class="promotion-notice" role="status" hidden></p>
             <div class="cards">
                 <article class="item" data-category="bolos">
                     <h3>Chocolate</h3>
@@ -83,6 +85,12 @@
                     <img class="item-image pudim-image" src="assets/pudim.png" alt="Pudim de leite condensado cremoso, com calda de caramelo.">
                     <p>Pudim de leite condensado cremoso, com calda de caramelo.</p>
                     <button class="buy-btn" data-name="Pudim" data-price="12">Adicionar · R$ 12,00</button>
+                </article>
+                <article class="item promotion-item" data-category="promocoes" data-available-days="3,6" hidden>
+                    <span class="promotion-badge">Promoção de quarta e sábado</span>
+                    <h3>Combo Doce</h3>
+                    <p>Um pudim e um bolo de pote.</p>
+                    <button class="buy-btn" data-name="Combo Doce (pudim e bolo de pote)" data-price="25">Adicionar · R$ 25,00</button>
                 </article>
             </div>
         </section>
@@ -115,6 +123,22 @@
             </div>
         </section>
     </main>
+
+    <dialog id="combo-flavor-dialog" class="combo-flavor-dialog" aria-labelledby="combo-flavor-title">
+        <form method="dialog" id="combo-flavor-form">
+            <button class="dialog-close" type="button" id="close-combo-dialog" aria-label="Fechar">×</button>
+            <h2 id="combo-flavor-title">Escolha o sabor</h2>
+            <p>Escolha o sabor do bolo de pote que acompanhará o pudim.</p>
+            <label for="combo-flavor-one">Sabor do bolo de pote</label>
+            <select id="combo-flavor-one" required>
+                <option value="Chocolate">Chocolate</option>
+                <option value="Prestígio">Prestígio</option>
+                <option value="Ninho">Ninho</option>
+                <option value="Limão">Limão</option>
+            </select>
+            <button class="buy-btn" type="submit">Adicionar combo · R$ 25,00</button>
+        </form>
+    </dialog>
 
     <button class="cart-widget" id="cart-widget" type="button" aria-label="Abrir carrinho">
         <span class="cart-widget-icon">🛒</span>
