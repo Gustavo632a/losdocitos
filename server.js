@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { randomUUID } = require('crypto');
-const { MercadoPagoConfig, Payment } = require('mercadopago');
+const { MercadoPagoConfig, Payment, WebhookSignatureValidator, InvalidWebhookSignatureError } = require('mercadopago');
 const orderStore = require('./supabase-store');
 require('dotenv').config();
 
@@ -32,6 +32,24 @@ app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader('Content-Security-Policy', [
+        "default-src 'self'",
+        "script-src 'self' https://sdk.mercadopago.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: https://api.qrserver.com",
+        "connect-src 'self' https://api.mercadopago.com https://viacep.com.br",
+        "frame-src 'self' https://www.mercadopago.com",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+    ].join('; '));
+    if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
     next();
 });
 
@@ -39,7 +57,10 @@ function rateLimit(req, res, next) {
     const key = `${req.ip}:${req.path}`;
     const now = Date.now();
     const entries = (requestLog.get(key) || []).filter((time) => now - time < 60_000);
-    if (entries.length >= 30) return res.status(429).json({ error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' });
+    if (entries.length >= 30) {
+        res.setHeader('Retry-After', '60');
+        return res.status(429).json({ error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' });
+    }
     entries.push(now);
     requestLog.set(key, entries);
     return next();
@@ -68,7 +89,7 @@ function requireOrderingHours(req, res, next) {
 }
 
 function isMockMode() {
-    return process.env.PAYMENT_MODE === 'mock';
+    return process.env.PAYMENT_MODE === 'mock' && process.env.NODE_ENV !== 'production';
 }
 
 function getPaymentClient() {
@@ -289,8 +310,22 @@ app.get('/api/status-pagamento/:id', async (req, res) => {
 
 // O webhook consulta o Mercado Pago antes de alterar qualquer status local; nunca confia no corpo recebido.
 app.post('/api/webhooks/mercadopago', async (req, res) => {
-    const paymentId = req.body?.data?.id;
-    if (!paymentId) return res.sendStatus(200);
+    const webhookSecret = process.env.MP_WEBHOOK_SECRET;
+    const paymentId = req.query['data.id'];
+    if (!webhookSecret || !paymentId) return res.sendStatus(401);
+    try {
+        WebhookSignatureValidator.validate({
+            xSignature: req.headers['x-signature'],
+            xRequestId: req.headers['x-request-id'],
+            dataId: paymentId,
+            secret: webhookSecret,
+            toleranceSeconds: 300,
+        });
+    } catch (error) {
+        if (error instanceof InvalidWebhookSignatureError) return res.sendStatus(401);
+        console.error('Erro ao validar assinatura do webhook:', error.message);
+        return res.sendStatus(500);
+    }
     const payment = getPaymentClient();
     if (!payment) return res.sendStatus(503);
     try {
