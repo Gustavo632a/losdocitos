@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { randomUUID } = require('crypto');
-const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
+const { MercadoPagoConfig, Payment } = require('mercadopago');
+const orderStore = require('./supabase-store');
 require('dotenv').config();
 
 const app = express();
@@ -10,9 +11,41 @@ const PORT = process.env.PORT || 3000;
 const ORDER_START_HOUR = 12;
 const ORDER_END_HOUR = 21;
 const ORDER_TIME_ZONE = 'America/Fortaleza';
+const ORDER_TTL_MS = 30 * 60 * 1000;
+const PRODUCT_PRICES = Object.freeze({
+    Chocolate: 15,
+    'Prestígio': 15,
+    Ninho: 15,
+    'Limão': 15,
+    Pudim: 12,
+    'Combo Doce (pudim e bolo de pote)': 25,
+});
+const orders = new Map();
+const simulatedPayments = new Map();
+const requestLog = new Map();
 
-app.use(cors());
-app.use(express.json());
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use(cors({ origin: process.env.ALLOWED_ORIGIN || false }));
+app.use(express.json({ limit: '50kb' }));
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-Frame-Options', 'DENY');
+    next();
+});
+
+function rateLimit(req, res, next) {
+    const key = `${req.ip}:${req.path}`;
+    const now = Date.now();
+    const entries = (requestLog.get(key) || []).filter((time) => now - time < 60_000);
+    if (entries.length >= 30) return res.status(429).json({ error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' });
+    entries.push(now);
+    requestLog.set(key, entries);
+    return next();
+}
+
+app.use('/api', rateLimit);
 
 function isOrderingOpen(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -23,345 +56,260 @@ function isOrderingOpen(date = new Date()) {
     }).formatToParts(date);
     const hour = Number(parts.find((part) => part.type === 'hour')?.value);
     const weekday = parts.find((part) => part.type === 'weekday')?.value;
-
     return weekday !== 'Sun' && hour >= ORDER_START_HOUR && hour < ORDER_END_HOUR;
 }
 
 function requireOrderingHours(req, res, next) {
     if (isOrderingOpen()) return next();
-
     return res.status(403).json({
         error: 'Pedidos indisponíveis no momento',
         details: 'Os pedidos são aceitos de segunda a sábado, das 12h às 21h (horário de Brasília).'
     });
 }
 
-// Servir arquivos estáticos do frontend (pasta raiz)
-app.use(express.static(path.join(__dirname)));
+function isMockMode() {
+    return process.env.PAYMENT_MODE === 'mock';
+}
 
-// Banco de dados em memória para simulações de Pix
-const simulatedPayments = {};
+function getPaymentClient() {
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+    if (!accessToken || accessToken.startsWith('SEU_')) return null;
+    return new Payment(new MercadoPagoConfig({ accessToken }));
+}
 
-// =============================================
-// ROTA: Obter Public Key do Mercado Pago
-// =============================================
+function validateCustomer({ name, email, cpf }) {
+    const cleanName = String(name || '').trim();
+    const cleanEmail = String(email || '').trim();
+    const cleanCpf = String(cpf || '').replace(/\D/g, '');
+    if (cleanName.length < 3 || cleanName.length > 120) return 'Informe um nome válido.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 254) return 'Informe um e-mail válido.';
+    if (cpf !== undefined && cleanCpf.length !== 11) return 'Informe um CPF válido com 11 dígitos.';
+    return null;
+}
+
+function calculateDistanceByCep(destination, origin = '58068404') {
+    if (destination === origin) return 0;
+    for (let size = 7; size >= 3; size -= 1) {
+        if (destination.slice(0, size) === origin.slice(0, size)) {
+            if (size === 7) return Math.min(1, 0.5 + Math.abs(Number(destination.slice(7)) - Number(origin.slice(7))) / 20);
+            if (size === 6) return Math.min(2, 0.2 + Math.abs(Number(destination.slice(6)) - Number(origin.slice(6))) / 10);
+            return ({ 5: 2, 4: 4, 3: 6 })[size];
+        }
+    }
+    return destination.slice(0, 2) === origin.slice(0, 2) ? 10 : 15;
+}
+
+function createOrder(data) {
+    const orderType = data.orderType === 'pickup' ? 'pickup' : data.orderType === 'delivery' ? 'delivery' : null;
+    if (!orderType) throw new Error('Tipo de pedido inválido.');
+    if (!data.items || typeof data.items !== 'object' || Array.isArray(data.items)) throw new Error('Carrinho inválido.');
+
+    const items = Object.entries(data.items).map(([name, quantity]) => {
+        const qty = Number(quantity);
+        const unitPrice = PRODUCT_PRICES[name];
+        if (!Number.isInteger(qty) || qty < 1 || qty > 20 || unitPrice === undefined) throw new Error('Há um item inválido no carrinho.');
+        return { name, quantity: qty, unitPrice, total: unitPrice * qty };
+    });
+    if (items.length === 0 || items.length > 20) throw new Error('Adicione itens válidos ao carrinho.');
+
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    let address = null;
+    let shipping = 0;
+    if (orderType === 'delivery') {
+        const source = data.address || {};
+        const cep = String(source.cep || '').replace(/\D/g, '');
+        if (cep.length !== 8 || !String(source.bairro || '').trim() || !String(source.rua || '').trim() || !String(source.numero || '').trim()) {
+            throw new Error('Informe um endereço de entrega completo.');
+        }
+        address = {
+            cep,
+            bairro: String(source.bairro).trim().slice(0, 100),
+            rua: String(source.rua).trim().slice(0, 150),
+            numero: String(source.numero).trim().slice(0, 20),
+            complemento: String(source.complemento || '').trim().slice(0, 100),
+            referencia: String(source.referencia || '').trim().slice(0, 150),
+        };
+        shipping = Math.round(calculateDistanceByCep(cep) * 2 * 100) / 100;
+    }
+
+    const id = randomUUID();
+    const order = { id, items, orderType, address, subtotal, shipping, total: subtotal + shipping, status: 'pending', createdAt: Date.now() };
+    orders.set(id, order);
+    setTimeout(() => orders.delete(id), ORDER_TTL_MS).unref?.();
+    return order;
+}
+
+async function getOrder(orderId) {
+    let order = orders.get(orderId);
+    if (!order) {
+        order = await orderStore.findOrder(orderId);
+        if (order) orders.set(order.id, order);
+    }
+    if (!order || Date.now() - order.createdAt > ORDER_TTL_MS) {
+        orders.delete(orderId);
+        return null;
+    }
+    return order;
+}
+
+function publicOrder(order) {
+    return { id: order.id, items: order.items, orderType: order.orderType, subtotal: order.subtotal, shipping: order.shipping, total: order.total, status: order.status };
+}
+
+async function markPaymentStatus(paymentId, status) {
+    let order = [...orders.values()].find((item) => String(item.paymentId) === String(paymentId));
+    if (!order) order = await orderStore.findOrderByPayment(paymentId);
+    if (!order) return null;
+    order.status = status === 'approved' ? 'paid' : status;
+    orders.set(order.id, order);
+    await orderStore.saveOrder(order);
+    await orderStore.updatePaymentStatus(paymentId, status);
+    return order;
+}
+
+app.use(express.static(path.join(__dirname), { dotfiles: 'ignore', index: 'index.html' }));
+
 app.get('/api/mercadopago-publickey', (req, res) => {
     const publicKey = process.env.MP_PUBLIC_KEY;
-    if (!publicKey) {
-        return res.status(400).json({ error: 'Public Key do Mercado Pago não configurada' });
-    }
+    if (!publicKey || isMockMode()) return res.status(400).json({ error: 'Pagamento por cartão indisponível.' });
     return res.json({ publicKey });
 });
 
-// =============================================
-// ROTA: Criar pagamento Pix
-// =============================================
+app.post('/api/pedidos', requireOrderingHours, async (req, res) => {
+    try {
+        const order = createOrder(req.body);
+        await orderStore.saveOrder(order);
+        return res.status(201).json(publicOrder(order));
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+});
+
 app.post('/api/criar-pagamento-pix', requireOrderingHours, async (req, res) => {
-    const { amount, email, name, cpf } = req.body;
+    const { orderId, name, email, cpf } = req.body;
+    const validationError = validateCustomer({ name, email, cpf });
+    const order = await getOrder(orderId);
+    if (validationError) return res.status(400).json({ error: validationError });
+    if (!order || order.status !== 'pending') return res.status(409).json({ error: 'Pedido inválido ou expirado. Revise o carrinho e tente novamente.' });
 
-    if (!amount || !email || !name) {
-        return res.status(400).json({ error: 'Campos obrigatórios ausentes (amount, email, name)' });
-    }
-
-    const token = process.env.MP_ACCESS_TOKEN;
-    const isMockMode = !token || token.startsWith('SEU_') || token.trim() === '';
-
-    if (isMockMode) {
-        // MODO SIMULADOR (sem token real)
-        const paymentId = 'sim-' + Math.floor(100000 + Math.random() * 900000);
-        const qrCodeCopiaCola = `00020101021226870014br.gov.bcb.pix2565pix.losdocitos.com.br/qr/v2/simulated-payment-${paymentId}`;
-        
-        simulatedPayments[paymentId] = {
-            status: 'pending',
-            amount: parseFloat(amount),
-            createdAt: new Date()
-        };
-
-        // Aprovação automática após 15 segundos (apenas para testes)
+    if (isMockMode()) {
+        const paymentId = `sim-${randomUUID()}`;
+        simulatedPayments.set(paymentId, { status: 'pending', orderId });
+        order.paymentId = paymentId;
+        order.customerName = name.trim();
+        order.customerEmail = email.trim();
+        await orderStore.saveOrder(order);
+        await orderStore.recordPayment(order, 'pix');
         setTimeout(() => {
-            if (simulatedPayments[paymentId]) {
-                simulatedPayments[paymentId].status = 'approved';
-                console.log(`[Simulador] Pagamento ${paymentId} aprovado automaticamente.`);
-            }
-        }, 15000);
-
-        return res.json({
-            id: paymentId,
-            status: 'pending',
-            qr_code: qrCodeCopiaCola,
-            qr_code_base64: null,
-            is_mock: true
-        });
+            const payment = simulatedPayments.get(paymentId);
+            if (payment) payment.status = 'approved';
+        }, 15_000).unref?.();
+        return res.json({ id: paymentId, status: 'pending', qr_code: `SIMULATED-PIX-${paymentId}`, qr_code_base64: null, is_mock: true });
     }
 
+    const payment = getPaymentClient();
+    if (!payment) return res.status(503).json({ error: 'Pagamentos indisponíveis. Configure as credenciais do Mercado Pago.' });
     try {
-        // MODO PRODUÇÃO (Mercado Pago real)
-        const client = new MercadoPagoConfig({ accessToken: token });
-        const payment = new Payment(client);
-        const cleanCpf = (cpf || '').replace(/\D/g, '');
-
         const response = await payment.create({
             body: {
-                transaction_amount: parseFloat(amount),
-                description: 'Pedido Los Docitos',
+                transaction_amount: order.total,
+                description: `Pedido Los Docitos ${order.id}`,
+                external_reference: order.id,
                 payment_method_id: 'pix',
-                payer: {
-                    email: email,
-                    first_name: name.split(' ')[0],
-                    last_name: name.split(' ').slice(1).join(' ') || 'Cliente',
-                    identification: cleanCpf ? {
-                        type: 'CPF',
-                        number: cleanCpf
-                    } : undefined
-                }
+                payer: { email: email.trim(), first_name: name.trim().split(' ')[0], last_name: name.trim().split(' ').slice(1).join(' ') || 'Cliente', identification: { type: 'CPF', number: String(cpf).replace(/\D/g, '') } }
             },
-            requestOptions: {
-                idempotencyKey: randomUUID()
-            }
+            requestOptions: { idempotencyKey: randomUUID() }
         });
-
-        return res.json({
-            id: response.id,
-            status: response.status,
-            qr_code: response.point_of_interaction.transaction_data.qr_code,
-            qr_code_base64: response.point_of_interaction.transaction_data.qr_code_base64,
-            is_mock: false
-        });
-
+        order.paymentId = String(response.id);
+        order.customerName = name.trim();
+        order.customerEmail = email.trim();
+        await orderStore.saveOrder(order);
+        await orderStore.recordPayment(order, 'pix');
+        return res.json({ id: response.id, status: response.status, qr_code: response.point_of_interaction?.transaction_data?.qr_code, qr_code_base64: response.point_of_interaction?.transaction_data?.qr_code_base64, is_mock: false });
     } catch (error) {
-        console.error('Erro ao criar pagamento Pix:', error);
-        const details = Array.isArray(error.cause)
-            ? error.cause
-                .map((cause) => [cause.code, cause.description].filter(Boolean).join(': '))
-                .filter(Boolean)
-                .join('; ')
-            : error.message || 'Erro desconhecido';
-
-        return res.status(Number(error.status) || 500).json({ 
-            error: 'Erro ao gerar pagamento Pix', 
-            details
-        });
+        console.error('Erro ao criar pagamento Pix:', error.message);
+        return res.status(Number(error.status) || 500).json({ error: 'Erro ao gerar pagamento Pix.' });
     }
 });
 
-// =============================================
-// ROTA: Consultar status do pagamento Pix
-// =============================================
-app.get('/api/status-pagamento/:id', async (req, res) => {
-    const { id } = req.params;
-
-    if (id.startsWith('sim-')) {
-        const payment = simulatedPayments[id];
-        if (!payment) {
-            return res.status(404).json({ error: 'Pagamento simulado não encontrado' });
-        }
-        return res.json({ status: payment.status });
-    }
-
-    const token = process.env.MP_ACCESS_TOKEN;
-    if (!token || token.startsWith('SEU_')) {
-        return res.status(400).json({ error: 'Token do Mercado Pago não configurado' });
-    }
-
-    try {
-        const client = new MercadoPagoConfig({ accessToken: token });
-        const payment = new Payment(client);
-        const response = await payment.get({ id: id });
-
-        return res.json({ status: response.status });
-    } catch (error) {
-        console.error(`Erro ao consultar pagamento ${id}:`, error);
-        return res.status(500).json({ error: 'Erro ao consultar status' });
-    }
-});
-
-// =============================================
-// ROTA: Criar link de pagamento (Cartão de Crédito)
-// =============================================
-app.post('/api/criar-link-cartao', requireOrderingHours, async (req, res) => {
-    const { amount, email, name } = req.body;
-
-    if (!amount || !email || !name) {
-        return res.status(400).json({ error: 'Campos obrigatórios ausentes (amount, email, name)' });
-    }
-
-    const token = process.env.MP_ACCESS_TOKEN;
-    const isMockMode = !token || token.startsWith('SEU_') || token.trim() === '';
-
-    const host = req.get('host');
-    const protocol = req.protocol;
-    const baseUrl = `${protocol}://${host}`;
-
-    if (isMockMode) {
-        const mockCheckoutUrl = `${baseUrl}/compra.html?status=approved&payment_type=credit_card&is_mock=true`;
-        console.log(`[Simulador] Link de pagamento por cartão gerado: ${mockCheckoutUrl}`);
-        return res.json({
-            init_point: mockCheckoutUrl,
-            is_mock: true
-        });
-    }
-
-    try {
-        const client = new MercadoPagoConfig({ accessToken: token });
-        const preference = new Preference(client);
-
-        const firstName = name.split(' ')[0];
-        const lastName = name.split(' ').slice(1).join(' ') || 'Cliente';
-
-        const response = await preference.create({
-            body: {
-                items: [
-                    {
-                        id: 'pedido-doces',
-                        title: 'Pedido Los Docitos',
-                        description: 'Compra de doces artesanais Los Docitos',
-                        quantity: 1,
-                        unit_price: parseFloat(amount),
-                        currency_id: 'BRL'
-                    }
-                ],
-                payer: {
-                    name: firstName,
-                    surname: lastName,
-                    email: email,
-                    phone: {
-                        area_code: '55',
-                        number: '0000000000'
-                    },
-                    address: {
-                        street_name: 'N/A',
-                        street_number: 0,
-                        zip_code: '00000-000'
-                    }
-                },
-                payment_methods: {
-                    excluded_payment_types: [
-                        { id: 'ticket' },
-                        { id: 'bank_transfer' },
-                        { id: 'pix' }
-                    ],
-                    excluded_payment_methods: [],
-                    installments: 12,
-                    default_installments: 1
-                },
-                back_urls: {
-                    success: `${baseUrl}/compra.html?status=approved&payment_type=credit_card`,
-                    failure: `${baseUrl}/compra.html?status=failure`,
-                    pending: `${baseUrl}/compra.html?status=pending`
-                },
-                binary_mode: true,
-                statement_descriptor: 'LOS DOCITOS'
-            }
-        });
-
-        console.log(`[Produção] Preferência de cartão criada: ${response.id}`);
-        return res.json({
-            init_point: response.init_point,
-            preference_id: response.id,
-            is_mock: false
-        });
-
-    } catch (error) {
-        console.error('Erro ao criar preferência de cartão:', error.message);
-        console.error('Detalhes do erro:', error.response?.data || error);
-        return res.status(500).json({ 
-            error: 'Erro ao gerar link de cartão de crédito', 
-            details: error.message || 'Erro desconhecido' 
-        });
-    }
-});
-
-// =============================================
-// ROTA: Processar pagamento com cartão (token)
-// =============================================
 app.post('/api/processar-pagamento-cartao', requireOrderingHours, async (req, res) => {
-    const { amount, email, name, token, installments, cardholderName, paymentMethodId, issuerId } = req.body;
+    const { orderId, name, email, token, installments, paymentMethodId, issuerId } = req.body;
+    const validationError = validateCustomer({ name, email });
+    const order = await getOrder(orderId);
+    if (validationError || !token || !paymentMethodId) return res.status(400).json({ error: validationError || 'Dados do cartão inválidos.' });
+    if (!order || order.status !== 'pending') return res.status(409).json({ error: 'Pedido inválido ou expirado. Revise o carrinho e tente novamente.' });
+    if (isMockMode()) return res.status(503).json({ error: 'Cartão não está disponível no modo de simulação.' });
 
-    if (!amount || !email || !name || !token || !paymentMethodId) {
-        return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
-    }
-
-    const mpToken = process.env.MP_ACCESS_TOKEN;
-    const isMockMode = !mpToken || mpToken.startsWith('SEU_') || mpToken.trim() === '';
-
-    if (isMockMode) {
-        // MODO SIMULADOR
-        const mockPaymentId = Math.floor(1000000 + Math.random() * 9000000);
-        console.log(`[Simulador] Pagamento de cartão aprovado automaticamente: ${mockPaymentId}`);
-        return res.json({
-            id: mockPaymentId,
-            status: 'approved',
-            status_detail: 'accredited',
-            transaction_amount: parseFloat(amount),
-            installments: installments,
-            is_mock: true
-        });
-    }
-
+    const payment = getPaymentClient();
+    if (!payment) return res.status(503).json({ error: 'Pagamentos indisponíveis. Configure as credenciais do Mercado Pago.' });
     try {
-        const client = new MercadoPagoConfig({ accessToken: mpToken });
-        const payment = new Payment(client);
-
         const response = await payment.create({
             body: {
-                transaction_amount: parseFloat(amount),
-                installments: parseInt(installments) || 1,
+                transaction_amount: order.total,
+                installments: Math.min(Math.max(Number.parseInt(installments, 10) || 1, 1), 12),
                 payment_method_id: paymentMethodId,
                 issuer_id: issuerId || undefined,
-                token: token,
-                description: 'Pedido Los Docitos',
-                payer: {
-                    email: email,
-                    first_name: name.split(' ')[0],
-                    last_name: name.split(' ').slice(1).join(' ') || 'Cliente'
-                },
-                statement_descriptor: 'LOS DOCITOS'
+                token,
+                description: `Pedido Los Docitos ${order.id}`,
+                external_reference: order.id,
+                payer: { email: email.trim(), first_name: name.trim().split(' ')[0], last_name: name.trim().split(' ').slice(1).join(' ') || 'Cliente' }
             },
-            requestOptions: {
-                idempotencyKey: randomUUID()
-            }
+            requestOptions: { idempotencyKey: randomUUID() }
         });
-
-        console.log(`[Produção] Pagamento de cartão processado: ${response.id} - Status: ${response.status}`);
-        
-        return res.json({
-            id: response.id,
-            status: response.status,
-            status_detail: response.status_detail,
-            transaction_amount: response.transaction_amount,
-            installments: response.installments,
-            is_mock: false
-        });
-
+        order.paymentId = String(response.id);
+        order.status = response.status === 'approved' ? 'paid' : response.status;
+        order.customerName = name.trim();
+        order.customerEmail = email.trim();
+        await orderStore.saveOrder(order);
+        await orderStore.recordPayment(order, 'credit_card');
+        return res.json({ id: response.id, status: response.status, status_detail: response.status_detail, transaction_amount: response.transaction_amount, installments: response.installments, is_mock: false });
     } catch (error) {
         console.error('Erro ao processar pagamento com cartão:', error.message);
-        console.error('Detalhes do erro:', error.response?.data || error);
-        const details = Array.isArray(error.cause)
-            ? error.cause
-                .map((cause) => [cause.code, cause.description].filter(Boolean).join(': '))
-                .filter(Boolean)
-                .join('; ')
-            : error.response?.data?.message || error.message || 'Erro desconhecido';
-
-        return res.status(Number(error.status) || 500).json({ 
-            error: 'Erro ao processar pagamento com cartão',
-            message: details,
-            details
-        });
+        return res.status(Number(error.status) || 500).json({ error: 'Erro ao processar pagamento com cartão.' });
     }
 });
 
-// =============================================
-// Iniciar Servidor
-// =============================================
-if (require.main === module) {
-app.listen(PORT, () => {
-    console.log(`\n======================================================`);
-    console.log(`🚀 Servidor Los Docitos rodando na porta ${PORT}`);
-    console.log(`👉 Acesse: http://localhost:${PORT}`);
-    console.log(`⚙️  Modo: ${process.env.MP_ACCESS_TOKEN && !process.env.MP_ACCESS_TOKEN.startsWith('SEU_') ? 'Mercado Pago API (Produção/Sandbox)' : 'Simulador Offline'}`);
-    console.log(`======================================================\n`);
+app.get('/api/status-pagamento/:id', async (req, res) => {
+    const { id } = req.params;
+    const mockPayment = simulatedPayments.get(id);
+    if (mockPayment) {
+        const order = await markPaymentStatus(id, mockPayment.status);
+        return res.json({ status: mockPayment.status, order: order ? publicOrder(order) : undefined });
+    }
+    const payment = getPaymentClient();
+    if (!payment) return res.status(503).json({ error: 'Consulta de pagamento indisponível.' });
+    try {
+        const response = await payment.get({ id });
+        const order = await markPaymentStatus(id, response.status);
+        return res.json({ status: response.status, order: order ? publicOrder(order) : undefined });
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro ao consultar status do pagamento.' });
+    }
 });
+
+// O webhook consulta o Mercado Pago antes de alterar qualquer status local; nunca confia no corpo recebido.
+app.post('/api/webhooks/mercadopago', async (req, res) => {
+    const paymentId = req.body?.data?.id;
+    if (!paymentId) return res.sendStatus(200);
+    const payment = getPaymentClient();
+    if (!payment) return res.sendStatus(503);
+    try {
+        const response = await payment.get({ id: paymentId });
+        const order = await getOrder(response.external_reference);
+        if (order && String(order.paymentId) === String(paymentId)) {
+            order.status = response.status === 'approved' ? 'paid' : response.status;
+            await orderStore.saveOrder(order);
+            await orderStore.updatePaymentStatus(paymentId, response.status);
+        }
+        return res.sendStatus(200);
+    } catch (error) {
+        console.error('Erro ao processar webhook do Mercado Pago:', error.message);
+        return res.sendStatus(500);
+    }
+});
+
+if (require.main === module) {
+    app.listen(PORT, () => console.log(`Servidor Los Docitos rodando na porta ${PORT}`));
 }
 
 module.exports = app;

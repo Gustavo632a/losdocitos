@@ -8,7 +8,7 @@ const PRODUCT_PRICES = Object.freeze({
     Ninho: 15,
     'Limão': 15,
     Pudim: 12,
-    'Combo Doce (Pudim e bolo de pote)': 25,
+    'Combo Doce (pudim e bolo de pote)': 25,
 });
 
 function getProductPrice(name) {
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const codigoSalvo = localStorage.getItem('pickupCode');
 
         if (codigoSalvo && pickupConfirmation) {
-            pickupConfirmation.innerHTML = `Seu código de retirada está salvo: <strong>${codigoSalvo}</strong>. Apresente este código na loja.`;
+            pickupConfirmation.textContent = `Seu código de retirada está salvo: ${codigoSalvo}. Apresente este código na loja.`;
         }
 
         if (pickupPhoneInput && localStorage.getItem('pickupPhone')) {
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
 
                 if (pickupConfirmation) {
-                    pickupConfirmation.innerHTML = `Retirada confirmada! Código: <strong>${codigoRetirada}</strong>. Enviando para a loja...`;
+                    pickupConfirmation.textContent = `Código de retirada gerado: ${codigoRetirada}. Prossiga para o pagamento para concluir o pedido.`;
                 }
 
                 setTimeout(() => {
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const valor = getProductPrice(nome) * quantidade;
                 subtotal += valor;
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${nome}</span> <span>${quantidade}x ${formatPrice(getProductPrice(nome))} = ${formatPrice(valor)}</span>`;
+                li.textContent = `${nome} — ${quantidade}x ${formatPrice(getProductPrice(nome))} = ${formatPrice(valor)}`;
                 carrinhoResumo.appendChild(li);
             });
 
@@ -549,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const valor = getProductPrice(nome) * quantidade;
                 subtotal += valor;
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${nome}</span> <span>${quantidade}x ${formatPrice(getProductPrice(nome))} = ${formatPrice(valor)}</span>`;
+                li.textContent = `${nome} — ${quantidade}x ${formatPrice(getProductPrice(nome))} = ${formatPrice(valor)}`;
                 carrinhoFinal.appendChild(li);
             });
         }
@@ -602,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (tabPix && tabCard && checkoutForm) {
         let selectedMethod = 'pix';
+        let pendingOrder = null;
 
         // O formulário inicia na aba Pix; campos ocultos não devem bloquear o envio.
         buyerCpfInput.required = true;
@@ -694,21 +695,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const returnedStatus = urlParams.get('status');
-        const returnedPaymentType = urlParams.get('payment_type');
-
-        if (returnedStatus === 'approved') {
-            document.getElementById('checkout-main-title').textContent = 'Pedido Confirmado!';
-            document.getElementById('checkout-main-subtitle').textContent = 'Agradecemos a sua preferência na Los Docitos.';
-            document.getElementById('payment-method-selector').style.display = 'none';
-            document.getElementById('payment-container-box').style.display = 'none';
-            whatsappArea.style.display = 'block';
-            paymentSuccessMessage.textContent = returnedPaymentType === 'credit_card'
-                ? '🎉 Pagamento por Cartão de Crédito Confirmado!'
-                : '🎉 Pagamento via Pix Confirmado!';
-        }
-
         let pollingInterval = null;
 
         function iniciarVerificacaoPagamento(paymentId) {
@@ -765,6 +751,40 @@ document.addEventListener('DOMContentLoaded', () => {
             return { paymentMethodId: paymentMethod.id, issuerId };
         }
 
+        async function obterPedidoDoServidor() {
+            if (pendingOrder) return pendingOrder;
+
+            let items;
+            try {
+                items = JSON.parse(localStorage.getItem('cartData') || '{}');
+            } catch {
+                throw new Error('Não foi possível ler o carrinho. Volte e adicione os itens novamente.');
+            }
+
+            const orderType = localStorage.getItem('orderType');
+            let address;
+            try {
+                address = JSON.parse(localStorage.getItem('enderecoEntrega') || '{}');
+            } catch {
+                throw new Error('Não foi possível ler o endereço. Preencha-o novamente.');
+            }
+            const response = await fetch('/api/pedidos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items, orderType, address })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Não foi possível criar o pedido.');
+
+            pendingOrder = data;
+            localStorage.setItem('orderId', data.id);
+            localStorage.setItem('freteValue', data.shipping.toFixed(2));
+            document.getElementById('subtotal-final').textContent = formatPrice(data.subtotal);
+            document.getElementById('frete-final').textContent = data.orderType === 'pickup' ? 'Sem frete (Retirada)' : formatPrice(data.shipping);
+            document.getElementById('total-final-compra').textContent = formatPrice(data.total);
+            return pendingOrder;
+        }
+
         checkoutForm.addEventListener('submit', async (event) => {
             event.preventDefault();
 
@@ -778,18 +798,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const name = document.getElementById('buyer-name').value;
             const email = document.getElementById('buyer-email').value;
-            const freteValue = parseFloat(localStorage.getItem('freteValue') || '0');
-            const cartData = localStorage.getItem('cartData');
-            let subtotal = 0;
-
-            if (cartData) {
-                const items = JSON.parse(cartData);
-                Object.entries(items).forEach(([nome, quantidade]) => {
-                    subtotal += getProductPrice(nome) * quantidade;
-                });
+            let order;
+            try {
+                order = await obterPedidoDoServidor();
+            } catch (error) {
+                alert(error.message);
+                btnSubmitPayment.disabled = false;
+                btnSubmitPayment.textContent = selectedMethod === 'pix' ? 'Gerar Pix' : 'Pagar com Cartão';
+                return;
             }
-
-            const total = subtotal + freteValue;
 
             if (selectedMethod === 'pix') {
                 const cpf = buyerCpfInput.value;
@@ -797,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch('/api/criar-pagamento-pix', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ amount: total, email, name, cpf })
+                        body: JSON.stringify({ orderId: order.id, email, name, cpf })
                     });
                     const data = await response.json();
 
@@ -859,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({
-                                                amount: total,
+                                                orderId: order.id,
                                                 email: email,
                                                 name: name,
                                                 token: cardToken.id,
