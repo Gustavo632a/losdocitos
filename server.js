@@ -7,9 +7,34 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ORDER_START_HOUR = 12;
+const ORDER_END_HOUR = 21;
+const ORDER_TIME_ZONE = 'America/Fortaleza';
 
 app.use(cors());
 app.use(express.json());
+
+function isOrderingOpen(date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: ORDER_TIME_ZONE,
+        hour: 'numeric',
+        weekday: 'short',
+        hourCycle: 'h23'
+    }).formatToParts(date);
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+    const weekday = parts.find((part) => part.type === 'weekday')?.value;
+
+    return weekday !== 'Sun' && hour >= ORDER_START_HOUR && hour < ORDER_END_HOUR;
+}
+
+function requireOrderingHours(req, res, next) {
+    if (isOrderingOpen()) return next();
+
+    return res.status(403).json({
+        error: 'Pedidos indisponíveis no momento',
+        details: 'Os pedidos são aceitos de segunda a sábado, das 12h às 21h (horário de Brasília).'
+    });
+}
 
 // Servir arquivos estáticos do frontend (pasta raiz)
 app.use(express.static(path.join(__dirname)));
@@ -31,7 +56,7 @@ app.get('/api/mercadopago-publickey', (req, res) => {
 // =============================================
 // ROTA: Criar pagamento Pix
 // =============================================
-app.post('/api/criar-pagamento-pix', async (req, res) => {
+app.post('/api/criar-pagamento-pix', requireOrderingHours, async (req, res) => {
     const { amount, email, name, cpf } = req.body;
 
     if (!amount || !email || !name) {
@@ -153,7 +178,7 @@ app.get('/api/status-pagamento/:id', async (req, res) => {
 // =============================================
 // ROTA: Criar link de pagamento (Cartão de Crédito)
 // =============================================
-app.post('/api/criar-link-cartao', async (req, res) => {
+app.post('/api/criar-link-cartao', requireOrderingHours, async (req, res) => {
     const { amount, email, name } = req.body;
 
     if (!amount || !email || !name) {
@@ -249,7 +274,7 @@ app.post('/api/criar-link-cartao', async (req, res) => {
 // =============================================
 // ROTA: Processar pagamento com cartão (token)
 // =============================================
-app.post('/api/processar-pagamento-cartao', async (req, res) => {
+app.post('/api/processar-pagamento-cartao', requireOrderingHours, async (req, res) => {
     const { amount, email, name, token, installments, cardholderName, paymentMethodId, issuerId } = req.body;
 
     if (!amount || !email || !name || !token || !paymentMethodId) {

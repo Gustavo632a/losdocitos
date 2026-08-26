@@ -1,22 +1,38 @@
 const whatsappNumber = '5581995687007';
+const ORDER_START_HOUR = 12;
+const ORDER_END_HOUR = 21;
+const ORDER_TIME_ZONE = 'America/Fortaleza';
 const PRODUCT_PRICES = Object.freeze({
     Chocolate: 15,
     'Prestígio': 15,
     Ninho: 15,
     'Limão': 15,
     Pudim: 12,
-    'Combo Doce (pudim e bolo de pote)': 25,
+    'Combo Doce (Pudim e bolo de pote)': 25,
 });
 
 function getProductPrice(name) {
-    if (name.startsWith('Combo Doce:')) {
-        return 25;
-    }
     return PRODUCT_PRICES[name] ?? 12;
 }
 
 function formatPrice(value) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function isOrderingOpen() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: ORDER_TIME_ZONE,
+        hour: 'numeric',
+        weekday: 'short',
+        hourCycle: 'h23',
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+    const weekday = parts.find((part) => part.type === 'weekday')?.value;
+    return weekday !== 'Sun' && hour >= ORDER_START_HOUR && hour < ORDER_END_HOUR;
+}
+
+function orderingClosedMessage() {
+    return 'Pedidos estão disponíveis de segunda a sábado, das 12h às 21h.';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -25,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuLinks = document.querySelectorAll('.menu-link');
     const items = document.querySelectorAll('.item');
     const promotionNotice = document.getElementById('promotion-notice');
-    const promotionDays = [3, 6];
+    const promotionDays = [3, 6]; // quarta-feira e sábado
     const isPromotionDay = promotionDays.includes(new Date().getDay());
 
     function setPromotionNotice(message = '') {
@@ -35,7 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     items.forEach((item) => {
-        if (item.dataset.category === 'promocoes') item.hidden = !isPromotionDay;
+        if (item.dataset.category === 'promocoes') {
+            item.hidden = !isPromotionDay;
+        }
     });
 
     if (menuToggle && menuNav) {
@@ -52,16 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 menuLinks.forEach((itemLink) => itemLink.classList.remove('active'));
                 link.classList.add('active');
 
-                setPromotionNotice(
-                    category === 'promocoes' && !isPromotionDay
-                        ? 'As promoções são válidas somente às quartas e sábados. Volte nesses dias para aproveitar!'
-                        : ''
-                );
+                if (category === 'promocoes' && !isPromotionDay) {
+                    setPromotionNotice('As promoções são válidas somente às quartas e sábados. Volte nesses dias para aproveitar!');
+                } else {
+                    setPromotionNotice();
+                }
 
                 items.forEach((item) => {
                     const itemCategory = item.dataset.category;
-                    const isAvailable = itemCategory !== 'promocoes' || isPromotionDay;
-                    if ((category === 'todos' || itemCategory === category) && isAvailable) {
+                    const itemIsAvailable = itemCategory !== 'promocoes' || isPromotionDay;
+                    if ((category === 'todos' || itemCategory === category) && itemIsAvailable) {
                         item.hidden = false;
                         item.style.display = 'block';
                         item.style.animation = 'fadeIn 0.3s ease';
@@ -104,9 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartWidgetCount = document.getElementById('cart-widget-count');
     const cartWidget = document.getElementById('cart-widget');
     const pickupInfo = document.getElementById('pickup-info');
-    const comboFlavorDialog = document.getElementById('combo-flavor-dialog');
-    const comboFlavorForm = document.getElementById('combo-flavor-form');
-    const closeComboDialog = document.getElementById('close-combo-dialog');
 
     function renderStoredPickupInfo() {
         const pickupConfirmation = document.getElementById('pickup-confirmation');
@@ -191,16 +206,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const shouldInitCart = Boolean(cartList && cartCount && cartTotal && buyNowLink && cartWidgetCount);
     if (shouldInitCart) {
-        document.querySelectorAll('.item .buy-btn').forEach((button) => {
+        document.querySelectorAll('.buy-btn').forEach((button) => {
             button.addEventListener('click', () => {
-                const availableDays = button.closest('.item')?.dataset.availableDays;
-                if (availableDays && !availableDays.split(',').map(Number).includes(new Date().getDay())) {
-                    cartError.textContent = 'Esta promoção é válida somente às quartas e sábados.';
+                if (!isOrderingOpen()) {
+                    cartError.textContent = orderingClosedMessage();
                     return;
                 }
 
-                if (button.closest('.promotion-item') && comboFlavorDialog) {
-                    comboFlavorDialog.showModal();
+                const availableDays = button.closest('.item')?.dataset.availableDays;
+                if (availableDays && !availableDays.split(',').map(Number).includes(new Date().getDay())) {
+                    cartError.textContent = 'Esta promoção é válida somente às quartas e sábados.';
                     return;
                 }
 
@@ -210,26 +225,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        if (closeComboDialog && comboFlavorDialog) {
-            closeComboDialog.addEventListener('click', () => comboFlavorDialog.close());
-        }
-
-        if (comboFlavorForm && comboFlavorDialog) {
-            comboFlavorForm.addEventListener('submit', (event) => {
-                event.preventDefault();
-                const firstFlavor = document.getElementById('combo-flavor-one').value;
-                const comboName = `Combo Doce: Pudim + ${firstFlavor}`;
-
-                cartItems[comboName] = (cartItems[comboName] || 0) + 1;
-                comboFlavorDialog.close();
-                renderCart();
-            });
-        }
-
         const pickupBtn = document.getElementById('pickup-btn');
         const confirmPickupBtn = document.getElementById('confirm-pickup');
 
         buyNowLink.addEventListener('click', () => {
+            if (!isOrderingOpen()) {
+                cartError.textContent = orderingClosedMessage();
+                return;
+            }
+
             if (Object.keys(cartItems).length === 0) {
                 cartError.textContent = 'Adicione pelo menos um item para avançar.';
                 return;
@@ -242,6 +246,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pickupBtn && pickupInfo) {
             pickupBtn.addEventListener('click', () => {
+                if (!isOrderingOpen()) {
+                    cartError.textContent = orderingClosedMessage();
+                    return;
+                }
+
                 if (Object.keys(cartItems).length === 0) {
                     cartError.textContent = 'Adicione pelo menos um item para retirada.';
                     pickupInfo.style.display = 'none';
@@ -259,6 +268,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const pickupPhoneInput = document.getElementById('pickup-phone');
 
             confirmPickupBtn.addEventListener('click', () => {
+                if (!isOrderingOpen()) {
+                    cartError.textContent = orderingClosedMessage();
+                    return;
+                }
+
                 if (Object.keys(cartItems).length === 0) {
                     cartError.textContent = 'Adicione pelo menos um item antes de confirmar retirada.';
                     return;
@@ -378,6 +392,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (confirmarBtn) {
             confirmarBtn.addEventListener('click', (event) => {
+                if (!isOrderingOpen()) {
+                    event.preventDefault();
+                    if (resultBox) {
+                        resultBox.innerHTML = `<p class="error-message">${orderingClosedMessage()}</p>`;
+                    }
+                    return;
+                }
+
                 if (!atualizarEstadoConfirmarBtn()) {
                     event.preventDefault();
                     if (resultBox) {
@@ -745,6 +767,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         checkoutForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+
+            if (!isOrderingOpen()) {
+                alert(orderingClosedMessage());
+                return;
+            }
+
             btnSubmitPayment.disabled = true;
             btnSubmitPayment.textContent = 'Processando...';
 
