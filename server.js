@@ -18,6 +18,9 @@ const PRODUCT_PRICES = Object.freeze({
     Ninho: 15,
     'Limão': 15,
     Pudim: 12,
+    'Cenoura com Chocolate': 17,
+    'Red Velvet': 17,
+    'Red Velvet com Limão': 17,
     'Combo Doce (pudim e bolo de pote)': 25,
 });
 const orders = new Map();
